@@ -27,6 +27,8 @@ from .monitor import (
     SessionState,
     consume_event,
     is_primary_session,
+    logical_session_id,
+    logical_session_paths,
     read_events,
 )
 
@@ -329,13 +331,19 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
         paths = list(sessions_dir.rglob("*.jsonl"))
     except OSError:
         paths = []
+    seen_tasks: set[str] = set()
     for path in paths:
         try:
             if not is_primary_session(path):
                 continue
+            task_id = logical_session_id(path)
+            if task_id in seen_tasks:
+                continue
+            seen_tasks.add(task_id)
             state = SessionState(path=path)
-            with path.open("r", encoding="utf-8") as log:
-                read_events(log, state)
+            for fragment in logical_session_paths(sessions_dir, path):
+                with fragment.open("r", encoding="utf-8") as log:
+                    read_events(log, state)
         except OSError:
             continue
         included_prompts: list[PromptRun] = []
@@ -433,14 +441,18 @@ def recent_sessions(sessions_dir: Path, limit: int = 24) -> list[dict[str, str]]
     except OSError:
         return []
     names = thread_names(sessions_dir.parent / "session_index.jsonl")
-    summaries = [session_summary(path, names) for path in paths[: limit * 2]]
-    user_tasks = [
-        summary
-        for summary in summaries
-        if summary is not None
-        and summary["model"] != "codex-auto-review"
-        and is_primary_session(Path(summary["path"]))
-    ]
+    summaries = [session_summary(path, names) for path in paths[: limit * 3]]
+    seen_tasks: set[str] = set()
+    user_tasks = []
+    for summary in summaries:
+        if summary is None or summary["model"] == "codex-auto-review":
+            continue
+        path = Path(summary["path"])
+        task_id = logical_session_id(path)
+        if not is_primary_session(path) or task_id in seen_tasks:
+            continue
+        seen_tasks.add(task_id)
+        user_tasks.append(summary)
     return user_tasks[:limit]
 
 

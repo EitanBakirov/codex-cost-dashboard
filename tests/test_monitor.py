@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_cost_dashboard.monitor import PromptRun, SessionState, consume_event, read_events
+from codex_cost_dashboard.monitor import PromptRun, SessionFollower, SessionState, consume_event, is_primary_session, read_events
 
 
 def event(timestamp, event_type, payload):
@@ -137,6 +137,33 @@ class MonitorParserTests(unittest.TestCase):
         prompt = self.state.prompts[0]
         self.assertTrue(prompt.completed)
         self.assertEqual(prompt.completed_at, "2026-01-02T08:00:04Z")
+
+    def test_continuation_files_with_one_session_id_are_merged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "first.jsonl"
+            second = root / "second.jsonl"
+            session_id = "one-logical-task"
+            first.write_text("\n".join(json.dumps(record) for record in [
+                event("2026-01-02T08:00:00Z", "session_meta", {"session_id": session_id, "timestamp": "2026-01-02T08:00:00Z"}),
+                event("2026-01-02T08:00:01Z", "event_msg", {"type": "user_message", "message": "Earlier prompt"}),
+                event("2026-01-02T08:00:02Z", "event_msg", {"type": "task_complete"}),
+            ]), encoding="utf-8")
+            second.write_text("\n".join(json.dumps(record) for record in [
+                event("2026-01-02T09:00:00Z", "session_meta", {"session_id": session_id, "timestamp": "2026-01-02T09:00:00Z"}),
+                event("2026-01-02T09:00:01Z", "event_msg", {"type": "user_message", "message": "Later prompt"}),
+            ]), encoding="utf-8")
+            follower = SessionFollower(root, second)
+            try:
+                self.assertEqual([prompt.text for prompt in follower.refresh().prompts], ["Earlier prompt", "Later prompt"])
+            finally:
+                follower.close()
+
+    def test_subagent_source_is_not_a_primary_task(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "review.jsonl"
+            path.write_text(json.dumps(event("2026-01-02T08:00:00Z", "session_meta", {"source": {"subagent": {"other": "guardian"}}})), encoding="utf-8")
+            self.assertFalse(is_primary_session(path))
 
 
 if __name__ == "__main__":

@@ -469,10 +469,59 @@ def is_primary_session(path: Path) -> bool:
                 if event.get("type") != "session_meta":
                     continue
                 payload = event_payload(event)
-                return payload.get("thread_source") != "subagent"
+                source = payload.get("source")
+                return payload.get("thread_source") != "subagent" and not (
+                    isinstance(source, dict) and "subagent" in source
+                )
     except OSError:
         return False
     return True
+
+
+def session_metadata(path: Path) -> dict[str, Any]:
+    """Read the small session header used to identify a logical Codex task."""
+    try:
+        with path.open("r", encoding="utf-8") as log:
+            for _ in range(12):
+                line = log.readline()
+                if not line:
+                    break
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if event.get("type") == "session_meta":
+                    return event_payload(event)
+    except OSError:
+        pass
+    return {}
+
+
+def logical_session_id(path: Path) -> str:
+    """Return Codex's stable task ID, falling back to the physical log name."""
+    metadata = session_metadata(path)
+    return str(metadata.get("session_id") or metadata.get("id") or path.stem)
+
+
+def logical_session_paths(sessions_dir: Path, path: Path) -> list[Path]:
+    """Find every primary JSONL fragment belonging to one Codex task.
+
+    Desktop can write a continuation to a new JSONL file (for example after a
+    model change) while retaining the same ``session_id``.  The dashboard must
+    present that as one task rather than losing its earlier prompt history.
+    """
+    task_id = logical_session_id(path)
+    matches: list[tuple[str, Path]] = []
+    try:
+        candidates = sessions_dir.rglob("*.jsonl")
+        for candidate in candidates:
+            if not is_primary_session(candidate) or logical_session_id(candidate) != task_id:
+                continue
+            metadata = session_metadata(candidate)
+            matches.append((str(metadata.get("timestamp") or ""), candidate))
+    except OSError:
+        return [path]
+    return [candidate for _timestamp, candidate in sorted(matches, key=lambda item: (item[0], str(item[1])))] or [path]
 
 
 def newest_session(sessions_dir: Path) -> Path | None:
@@ -628,8 +677,25 @@ def load_state(path: Path) -> tuple[SessionState, Any, int]:
     return state, handle, handle.tell()
 
 
+def load_logical_session(sessions_dir: Path, path: Path) -> tuple[SessionState, tuple[tuple[str, int], ...]]:
+    """Rebuild one task from all of its chronological on-disk log fragments."""
+    paths = logical_session_paths(sessions_dir, path)
+    state = SessionState(path=paths[-1])
+    signature: list[tuple[str, int]] = []
+    for fragment in paths:
+        try:
+            with fragment.open("r", encoding="utf-8") as log:
+                read_events(log, state)
+            signature.append((str(fragment), fragment.stat().st_mtime_ns))
+        except OSError:
+            continue
+    if paths:
+        state.path = paths[-1]
+    return state, tuple(signature)
+
+
 class SessionFollower:
-    """Incrementally follows a saved Desktop task without reparsing its log."""
+    """Follow a logical Desktop task, including any continuation log files."""
 
     def __init__(self, sessions_dir: Path, fixed_session: Path | None = None) -> None:
         self.sessions_dir = sessions_dir
@@ -638,7 +704,7 @@ class SessionFollower:
         if path is None or not path.is_file():
             target = fixed_session or sessions_dir
             raise FileNotFoundError(f"No Codex JSONL session found at {target}")
-        self.state, self.handle, self.offset = load_state(path)
+        self.state, self.signature = load_logical_session(sessions_dir, path)
         self.last_discovery = 0.0
 
     def refresh(self) -> SessionState:
@@ -646,25 +712,18 @@ class SessionFollower:
         if self.fixed_session is None and now - self.last_discovery >= 3.0:
             self.last_discovery = now
             latest = newest_session(self.sessions_dir)
-            if latest is not None and latest != self.state.path:
-                self.handle.close()
-                self.state, self.handle, self.offset = load_state(latest)
+            if latest is not None:
+                self.state, self.signature = load_logical_session(self.sessions_dir, latest)
+                return self.state
 
-        try:
-            current_size = self.state.path.stat().st_size
-        except OSError:
-            current_size = self.offset
-        if current_size < self.offset:
-            self.handle.close()
-            self.state, self.handle, self.offset = load_state(self.state.path)
-        else:
-            self.handle.seek(self.offset)
-            read_events(self.handle, self.state)
-            self.offset = self.handle.tell()
+        # A selected task may receive a continuation fragment or append to an
+        # existing fragment. Rebuilding keeps prompt attribution correct across
+        # the file boundary and is small compared with the dashboard refresh.
+        self.state, self.signature = load_logical_session(self.sessions_dir, self.fixed_session or self.state.path)
         return self.state
 
     def close(self) -> None:
-        self.handle.close()
+        pass
 
 
 def print_screen(content: str, clear: bool) -> None:
