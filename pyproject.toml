@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-cost-dashboard"
+version = "0.1.0"
+description = "A private, local-only dashboard for understanding Codex usage and estimated cost."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Codex Cost Dashboard contributors"}]
+keywords = ["codex", "dashboard", "usage", "tokens", "cost"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/EitanBakirov/codex-cost-dashboard"
+Issues = "https://github.com/EitanBakirov/codex-cost-dashboard/issues"
+
+[project.scripts]
+codex-cost-dashboard = "codex_cost_dashboard.dashboard:main"
+codex-cost-monitor = "codex_cost_dashboard.monitor:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+codex_cost_dashboard = ["dashboard.html"]

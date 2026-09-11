@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a dashboard or parser problem without sharing private Codex data.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the dashboard. **Do not attach a real Codex session log or auth file.** Replace prompts, account details, project paths, tool arguments, and outputs with synthetic values.
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.4"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the visible behavior and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Minimal sanitized fixture
+      description: Optional. Include only the smallest synthetic JSONL records needed to reproduce a parser issue.
+      render: jsonl
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed real prompt text, account data, secrets, tool arguments, outputs, and personal paths.
+          required: true

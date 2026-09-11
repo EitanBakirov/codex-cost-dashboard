@@ -1,0 +1,21 @@
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+.coverage
+htmlcov/
+.serena/
+
+# Never commit local Codex data or copied session logs.
+.codex/
+sessions/
+*.jsonl
+auth.json
+dashboard-state.json
