@@ -23,6 +23,7 @@ It reads the Codex session logs already stored on your computer, serves the dash
 - Python 3.10 or newer
 - Codex with locally persisted session history
 - macOS, Linux, or Windows
+- Python 3.10 or newer (`python3 --version`)
 
 Codex stores local state under `CODEX_HOME`, which defaults to `~/.codex`, according to the [official OpenAI Codex configuration documentation](https://learn.chatgpt.com/docs/config-file/config-advanced#config-and-state-locations). The dashboard follows that setting automatically.
 
@@ -33,11 +34,16 @@ Codex stores local state under `CODEX_HOME`, which defaults to `~/.codex`, accor
 ```bash
 git clone https://github.com/EitanBakirov/codex-cost-dashboard.git
 cd codex-cost-dashboard
-python3 -m venv .venv
+# Use the Python 3.10+ executable on this computer (for example python3.12).
+python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install .
 codex-cost-dashboard --open
 ```
+
+If `python3 --version` reports an older version (macOS can still ship Python
+3.9), use the newer executable installed on your machine, such as `python3.12`
+or `python3.11`.
 
 ### Windows PowerShell
 
@@ -54,7 +60,7 @@ The page opens at [http://127.0.0.1:8766](http://127.0.0.1:8766). Keep the termi
 You can also run it directly from the clone without installing anything:
 
 ```bash
-python3 run_dashboard.py --open
+python3.12 run_dashboard.py --open
 ```
 
 PowerShell equivalent:
