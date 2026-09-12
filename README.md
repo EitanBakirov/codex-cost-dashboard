@@ -20,7 +20,6 @@ It reads the Codex session logs already stored on your computer, serves the dash
 
 ## Requirements
 
-- Python 3.10 or newer
 - Codex with locally persisted session history
 - macOS, Linux, or Windows
 - Python 3.10 or newer (`python3 --version`)
@@ -44,6 +43,13 @@ codex-cost-dashboard --open
 If `python3 --version` reports an older version (macOS can still ship Python
 3.9), use the newer executable installed on your machine, such as `python3.12`
 or `python3.11`.
+
+If your shell still picks an older globally installed dashboard command after
+activating the environment, use the installed module directly:
+
+```bash
+python -m codex_cost_dashboard.dashboard --open
+```
 
 ### Windows PowerShell
 
@@ -73,7 +79,7 @@ py -3 run_dashboard.py --open
 
 Give your local coding agent this prompt:
 
-> Clone `https://github.com/EitanBakirov/codex-cost-dashboard.git`, install it in a project-local Python virtual environment using the instructions for this operating system, run its test suite, and launch `codex-cost-dashboard --open`. Keep it local-only, do not copy or upload my Codex session files, and do not change my Codex configuration.
+> Clone `https://github.com/EitanBakirov/codex-cost-dashboard.git`, install it in a project-local Python 3.10+ virtual environment using the instructions for this operating system, run its test suite, and launch `python -m codex_cost_dashboard.dashboard --open`. Keep it local-only, do not copy or upload my Codex session files, and do not change my Codex configuration.
 
 ## Options
 
@@ -111,7 +117,8 @@ It does not modify Codex sessions or authentication. No analytics, telemetry, CD
 - The plan percentage is the latest rate-limit snapshot observed in local logs for the active account. Historical session logs may belong to a different account.
 - Old sessions generally cannot be assigned reliably to an account because their logs may not contain account identity.
 - Side chats and internal/automated work are included only when Codex persists enough local information to identify them safely.
-- Unknown models remain visible but contribute no estimated cost until a rate is added.
+- A prompt can be shown as **model not recorded** when its saved local log has no reliable model association. Its tokens remain included, but an exact model-specific cost cannot be recovered from those local records alone and is excluded from the estimate.
+- A named model without a bundled rate remains visible but contributes no estimated cost until a rate is added.
 - Local logs can change across Codex releases. Please file a sanitized fixture when a new shape is not recognized.
 
 ## Development

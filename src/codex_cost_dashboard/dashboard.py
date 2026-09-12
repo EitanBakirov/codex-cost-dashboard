@@ -173,7 +173,7 @@ def prompt_dict(prompt: PromptRun | None, usd_per_credit: float) -> dict[str, An
         "history_preview": prompt_history_preview(prompt.text),
         "input_tags": prompt_input_tags(prompt),
         "full_text": prompt.text,
-        "model": prompt.model,
+        "model": prompt.model or "model not recorded",
         "effort": prompt.effort,
         "started_at": prompt.started_at,
         "duration_seconds": prompt_duration_seconds(prompt),
@@ -361,7 +361,10 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
             meter.tool_calls += prompt.meter.tool_calls
             meter.unknown_pricing_calls += prompt.meter.unknown_pricing_calls
             prompt_count += 1
-            model = (prompt.model or "unknown").strip() or "unknown"
+            # Local transcript fragments occasionally omit the turn's model.
+            # Keep the prompt visible without implying that "unknown" is a
+            # model the person selected.
+            model = (prompt.model or "model not recorded").strip() or "model not recorded"
             model_counts[model] = model_counts.get(model, 0) + 1
     return {
         **usage_dict(meter, usd_per_credit),
