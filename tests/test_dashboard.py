@@ -93,6 +93,8 @@ class PreviewTests(unittest.TestCase):
         self.assertIn("Task / Session", HTML)
         self.assertIn("Prompt history", HTML)
         self.assertIn("Current Codex account", HTML)
+        self.assertIn("openCommands", HTML)
+        self.assertIn("tool-category", HTML)
 
 
 class AccountTests(unittest.TestCase):

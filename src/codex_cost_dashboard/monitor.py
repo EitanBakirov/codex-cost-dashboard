@@ -220,6 +220,29 @@ def shell_command(source: str, tool_names: list[str]) -> str | None:
         return match.group(1)
 
 
+def shell_command_description(command: str | None) -> tuple[str, str]:
+    """Return a concise, non-speculative intent label for a shell command."""
+    first = (command or "").lstrip().split(maxsplit=1)
+    executable = first[0].rsplit("/", 1)[-1] if first else ""
+    descriptions = {
+        "rg": ("Search", "Search project files"),
+        "grep": ("Search", "Search file contents"),
+        "find": ("Find", "Find local files"),
+        "ls": ("Browse", "List local files"),
+        "pwd": ("Browse", "Check the working folder"),
+        "cat": ("Read", "Read a local file"),
+        "sed": ("Read", "Read or transform local text"),
+        "head": ("Read", "Read the start of a local file"),
+        "tail": ("Read", "Read the end of a local file"),
+        "git": ("Git", "Inspect or update Git state"),
+        "python": ("Run", "Run a local Python command"),
+        "python3": ("Run", "Run a local Python command"),
+        "node": ("Run", "Run a local Node command"),
+        "npm": ("Run", "Run a local npm command"),
+    }
+    return descriptions.get(executable, ("Shell", "Run a local shell command"))
+
+
 def describe_tool_call(payload: dict[str, Any]) -> dict[str, Any]:
     """Build a deterministic, privacy-conscious dashboard record for a tool call."""
     call_type = str(payload.get("type") or "tool")
@@ -229,13 +252,20 @@ def describe_tool_call(payload: dict[str, Any]) -> dict[str, Any]:
     display_name = name
     action = f"Run {humanize_tool_name(name)}"
 
+    command = shell_command(source, nested or [name])
+    category = "Tool"
     if nested:
         display_name = ", ".join(humanize_tool_name(tool) for tool in nested[:3])
         if len(nested) > 3:
             display_name += f" +{len(nested) - 3} more"
         action = tool_action(nested[0]) if len(nested) == 1 else "Run multiple nested tools through the orchestrator"
+        category = humanize_tool_name(nested[0]) if len(nested) == 1 else "Multiple tools"
     else:
         action = tool_action(name)
+        category = humanize_tool_name(name)
+
+    if command:
+        category, action = shell_command_description(command)
 
     return {
         "id": str(payload.get("call_id") or payload.get("id") or ""),
@@ -244,7 +274,8 @@ def describe_tool_call(payload: dict[str, Any]) -> dict[str, Any]:
         "display_name": display_name,
         "action": action,
         "nested_tools": nested,
-        "command": shell_command(source, nested or [name]),
+        "command": command,
+        "category": category,
         "status": "running",
         "started_at": None,
         "completed_at": None,

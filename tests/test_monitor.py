@@ -3,7 +3,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_cost_dashboard.monitor import PromptRun, SessionFollower, SessionState, consume_event, is_primary_session, read_events
+from codex_cost_dashboard.monitor import (
+    PromptRun,
+    SessionFollower,
+    SessionState,
+    consume_event,
+    describe_tool_call,
+    is_primary_session,
+    read_events,
+)
 
 
 def event(timestamp, event_type, payload):
@@ -164,6 +172,18 @@ class MonitorParserTests(unittest.TestCase):
             path = Path(directory) / "review.jsonl"
             path.write_text(json.dumps(event("2026-01-02T08:00:00Z", "session_meta", {"source": {"subagent": {"other": "guardian"}}})), encoding="utf-8")
             self.assertFalse(is_primary_session(path))
+
+    def test_shell_tool_call_has_a_scannable_intent(self):
+        tool = describe_tool_call(
+            {
+                "type": "custom_tool_call",
+                "name": "exec_command",
+                "input": 'await tools.exec_command({"cmd":"rg -n TODO src"})',
+            }
+        )
+        self.assertEqual(tool["category"], "Search")
+        self.assertEqual(tool["action"], "Search project files")
+        self.assertEqual(tool["command"], "rg -n TODO src")
 
 
 if __name__ == "__main__":

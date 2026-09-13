@@ -39,6 +39,64 @@ DEFAULT_AUTH_FILE = DEFAULT_CODEX_HOME / "auth.json"
 HTML_PATH = Path(__file__).with_name("dashboard.html")
 HTML = HTML_PATH.read_text(encoding="utf-8")
 
+# The bundled dashboard is intentionally a single portable HTML file.  Keep
+# these small inspector enhancements here so the document remains readable
+# despite its compact generated markup.
+INSPECTOR_ENHANCEMENTS = """
+<style>
+.tool-category{display:inline-flex;margin-right:7px;padding:2px 6px;border:1px solid #7692b950;border-radius:5px;background:#6f8fc51a;color:#afc6ea;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:1px}
+</style>
+<script>
+(() => {
+  const openCommands = new Set();
+  const intentFor = command => {
+    const executable = (command.trim().split(/\\s+/, 1)[0] || '').split('/').pop();
+    const intents = {
+      rg: ['Search', 'Search project files'], grep: ['Search', 'Search file contents'],
+      find: ['Find', 'Find local files'], ls: ['Browse', 'List local files'],
+      pwd: ['Browse', 'Check the working folder'], cat: ['Read', 'Read a local file'],
+      sed: ['Read', 'Read or transform local text'], head: ['Read', 'Read the start of a local file'],
+      tail: ['Read', 'Read the end of a local file'], git: ['Git', 'Inspect or update Git state'],
+      python: ['Run', 'Run a local Python command'], python3: ['Run', 'Run a local Python command'],
+      node: ['Run', 'Run a local Node command'], npm: ['Run', 'Run a local npm command']
+    };
+    return intents[executable] || ['Shell', 'Run a local shell command'];
+  };
+  const decorateTools = () => {
+    const prompt = document.getElementById('inspectTitle')?.textContent || '';
+    document.querySelectorAll('#pTools .tool-command').forEach((details, index) => {
+      const command = details.querySelector('code')?.textContent || '';
+      const key = `${prompt}|${index}|${command}`;
+      details.dataset.commandKey = key;
+      details.open = openCommands.has(key);
+      const [category, explanation] = intentFor(command);
+      const card = details.closest('.tool-call');
+      const action = card?.querySelector('.tool-action');
+      if (action && !action.querySelector('.tool-category')) {
+        const badge = document.createElement('span');
+        badge.className = 'tool-category';
+        badge.textContent = category;
+        action.replaceChildren(badge, document.createTextNode(explanation));
+      }
+      const summary = details.querySelector('summary');
+      if (summary) summary.textContent = details.open ? 'Hide shell command' : 'Show shell command';
+      if (!details.dataset.persistenceBound) {
+        details.dataset.persistenceBound = 'true';
+        details.addEventListener('toggle', () => {
+          if (details.open) openCommands.add(key); else openCommands.delete(key);
+          const label = details.querySelector('summary');
+          if (label) label.textContent = details.open ? 'Hide shell command' : 'Show shell command';
+        });
+      }
+    });
+  };
+  new MutationObserver(decorateTools).observe(document.getElementById('pTools'), {childList: true, subtree: true});
+  decorateTools();
+})();
+</script>
+"""
+HTML = HTML.replace("</body>", INSPECTOR_ENHANCEMENTS + "</body>")
+
 
 def usage_dict(meter: MeteredUsage, usd_per_credit: float) -> dict[str, Any]:
     usage = meter.usage
