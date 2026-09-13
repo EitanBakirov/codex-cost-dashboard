@@ -182,8 +182,27 @@ class MonitorParserTests(unittest.TestCase):
             }
         )
         self.assertEqual(tool["category"], "Search")
-        self.assertEqual(tool["action"], "Search project files")
+        self.assertEqual(tool["action"], "Search project files · src")
         self.assertEqual(tool["command"], "rg -n TODO src")
+
+    def test_shell_intents_distinguish_tests_git_changes_and_installation(self):
+        cases = [
+            ("pytest tests", "Test", "Run project tests"),
+            ("git status", "Git", "Inspect Git state"),
+            ("git commit -m fix", "Git change", "Change local Git state"),
+            ("python -m pip install -e .", "Install", "Install local dependencies"),
+        ]
+        for command, category, action in cases:
+            with self.subTest(command=command):
+                tool = describe_tool_call(
+                    {
+                        "type": "custom_tool_call",
+                        "name": "exec_command",
+                        "input": f'await tools.exec_command({{"cmd":{json.dumps(command)}}})',
+                    }
+                )
+                self.assertEqual(tool["category"], category)
+                self.assertEqual(tool["action"], action)
 
 
 if __name__ == "__main__":

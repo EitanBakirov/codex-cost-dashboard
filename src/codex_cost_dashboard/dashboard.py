@@ -51,12 +51,24 @@ INSPECTOR_ENHANCEMENTS = """
   const openCommands = new Set();
   const intentFor = command => {
     const executable = (command.trim().split(/\\s+/, 1)[0] || '').split('/').pop();
+    const lower = command.toLowerCase();
+    const gitAction = command.trim().split(/\\s+/, 3)[1] || '';
+    if (executable === 'git') {
+      if (['status','diff','log','show','branch','remote','rev-parse'].includes(gitAction)) return ['Git'];
+      if (['fetch','pull','push'].includes(gitAction)) return ['Git sync'];
+      if (['add','commit','switch','checkout','merge','rebase','reset','restore'].includes(gitAction)) return ['Git change'];
+      return ['Git'];
+    }
+    if (['pytest','tox'].includes(executable) || lower.includes('pytest') || lower.includes(' -m unittest') || /\\bnpm\\s+(?:run\\s+)?test\\b/.test(lower)) return ['Test'];
+    if (['make','cmake'].includes(executable) || /\\b(?:npm\\s+run\\s+build|cargo\\s+build)\\b/.test(lower)) return ['Build'];
+    if (/\\b(?:pip(?:3)?\\s+install|npm\\s+(?:install|ci)|brew\\s+install)\\b/.test(lower)) return ['Install'];
+    if (['uvicorn','gunicorn'].includes(executable) || /\\b(?:npm\\s+run\\s+(?:dev|start)|flask\\s+run)\\b/.test(lower)) return ['Server'];
     const intents = {
       rg: ['Search', 'Search project files'], grep: ['Search', 'Search file contents'],
       find: ['Find', 'Find local files'], ls: ['Browse', 'List local files'],
       pwd: ['Browse', 'Check the working folder'], cat: ['Read', 'Read a local file'],
       sed: ['Read', 'Read or transform local text'], head: ['Read', 'Read the start of a local file'],
-      tail: ['Read', 'Read the end of a local file'], git: ['Git', 'Inspect or update Git state'],
+      tail: ['Read', 'Read the end of a local file'],
       python: ['Run', 'Run a local Python command'], python3: ['Run', 'Run a local Python command'],
       node: ['Run', 'Run a local Node command'], npm: ['Run', 'Run a local npm command']
     };
@@ -76,7 +88,7 @@ INSPECTOR_ENHANCEMENTS = """
         const badge = document.createElement('span');
         badge.className = 'tool-category';
         badge.textContent = category;
-        action.replaceChildren(badge, document.createTextNode(explanation));
+        action.prepend(badge);
       }
       const summary = details.querySelector('summary');
       const summaryText = details.open ? 'Hide shell command' : 'Show shell command';

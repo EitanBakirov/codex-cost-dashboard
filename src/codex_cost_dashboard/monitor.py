@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import sys
 import time
 from dataclasses import dataclass, field
@@ -220,21 +221,61 @@ def shell_command(source: str, tool_names: list[str]) -> str | None:
         return match.group(1)
 
 
+def shell_command_target(tokens: list[str]) -> str:
+    """Return one short, safe-to-display command target when it is obvious."""
+    candidates = [token for token in tokens[1:] if token and not token.startswith(("-", "$"))]
+    if not candidates:
+        return ""
+    target = candidates[-1].rstrip("/\\")
+    if not target or target in {"|", "&&", ";"} or "=" in target:
+        return ""
+    target = target.replace("\\", "/")
+    parts = [part for part in target.split("/") if part and part not in {".", ".."}]
+    if not parts:
+        return ""
+    return "/".join(parts[-2:])
+
+
 def shell_command_description(command: str | None) -> tuple[str, str]:
     """Return a concise, non-speculative intent label for a shell command."""
-    first = (command or "").lstrip().split(maxsplit=1)
-    executable = first[0].rsplit("/", 1)[-1] if first else ""
+    try:
+        tokens = shlex.split(command or "")
+    except ValueError:
+        tokens = (command or "").lstrip().split()
+    executable = tokens[0].rsplit("/", 1)[-1] if tokens else ""
+    subcommand = tokens[1] if len(tokens) > 1 else ""
+    lower = (command or "").lower()
+    target = shell_command_target(tokens)
+    suffix = f" · {target}" if target else ""
+
+    if executable == "git":
+        if subcommand in {"status", "diff", "log", "show", "branch", "remote", "rev-parse"}:
+            return "Git", "Inspect Git state"
+        if subcommand in {"fetch", "pull", "push"}:
+            return "Git sync", "Synchronize Git with a remote"
+        if subcommand in {"add", "commit", "switch", "checkout", "merge", "rebase", "reset", "restore"}:
+            return "Git change", "Change local Git state"
+        return "Git", "Run a Git command"
+
+    if executable in {"pytest", "tox"} or "pytest" in lower or " -m unittest" in lower or re.search(r"\bnpm\s+(?:run\s+)?test\b", lower):
+        return "Test", "Run project tests"
+    if executable in {"make", "cmake"} or re.search(r"\b(?:npm\s+run\s+build|cargo\s+build)\b", lower):
+        return "Build", "Build the project"
+    if re.search(r"\b(?:pip(?:3)?\s+install|npm\s+(?:install|ci)|brew\s+install)\b", lower):
+        return "Install", "Install local dependencies"
+    if executable in {"uvicorn", "gunicorn"} or re.search(r"\b(?:npm\s+run\s+(?:dev|start)|flask\s+run)\b", lower):
+        return "Server", "Start a local development server"
+
     descriptions = {
-        "rg": ("Search", "Search project files"),
-        "grep": ("Search", "Search file contents"),
-        "find": ("Find", "Find local files"),
-        "ls": ("Browse", "List local files"),
+        "rg": ("Search", "Search project files" + suffix),
+        "grep": ("Search", "Search file contents" + suffix),
+        "find": ("Find", "Find local files" + suffix),
+        "ls": ("Browse", "List local files" + suffix),
         "pwd": ("Browse", "Check the working folder"),
-        "cat": ("Read", "Read a local file"),
-        "sed": ("Read", "Read or transform local text"),
-        "head": ("Read", "Read the start of a local file"),
-        "tail": ("Read", "Read the end of a local file"),
-        "git": ("Git", "Inspect or update Git state"),
+        "cat": ("Read", "Read a local file" + suffix),
+        "sed": ("Read", "Read or transform local text" + suffix),
+        "head": ("Read", "Read the start of a local file" + suffix),
+        "tail": ("Read", "Read the end of a local file" + suffix),
         "python": ("Run", "Run a local Python command"),
         "python3": ("Run", "Run a local Python command"),
         "node": ("Run", "Run a local Node command"),
