@@ -45,6 +45,7 @@ HTML = HTML_PATH.read_text(encoding="utf-8")
 INSPECTOR_ENHANCEMENTS = """
 <style>
 .tool-category{display:inline-flex;margin-right:7px;padding:2px 6px;border:1px solid #7692b950;border-radius:5px;background:#6f8fc51a;color:#afc6ea;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:1px}
+.tool-call{padding:0;overflow:hidden}.tool-head{padding:11px 11px 8px;border-bottom:1px solid #3d3b37}.tool-action{margin:0;padding:9px 11px;background:#1d1d1d}.tool-outcome{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;border-top:1px solid #35332f;background:#181818}.tool-outcome .tool-meta,.tool-outcome .tool-result{margin:0}.tool-outcome .tool-result{text-align:right}.tool-command{margin:0;padding:9px 11px;border-top:1px solid #45413b;background:#151515}.tool-command pre{margin-top:8px}
 </style>
 <script>
 (() => {
@@ -104,6 +105,19 @@ INSPECTOR_ENHANCEMENTS = """
           if (label && label.textContent !== labelText) label.textContent = labelText;
         });
       }
+    });
+    document.querySelectorAll('#pTools .tool-call').forEach(card => {
+      const details = card.querySelector('.tool-command');
+      const meta = card.querySelector('.tool-meta');
+      const result = card.querySelector('.tool-result');
+      if (meta && result && !card.querySelector('.tool-outcome')) {
+        const outcome = document.createElement('div');
+        outcome.className = 'tool-outcome';
+        card.insertBefore(outcome, details);
+        outcome.append(meta, result);
+      }
+      // The exact command is supporting detail, not the first thing to read.
+      if (details && card.lastElementChild !== details) card.append(details);
     });
   };
   new MutationObserver(decorateTools).observe(document.getElementById('pTools'), {childList: true, subtree: true});

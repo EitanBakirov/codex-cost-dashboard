@@ -95,6 +95,7 @@ class PreviewTests(unittest.TestCase):
         self.assertIn("Current Codex account", HTML)
         self.assertIn("openCommands", HTML)
         self.assertIn("tool-category", HTML)
+        self.assertIn("tool-outcome", HTML)
 
 
 class AccountTests(unittest.TestCase):
