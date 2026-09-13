@@ -79,13 +79,17 @@ INSPECTOR_ENHANCEMENTS = """
         action.replaceChildren(badge, document.createTextNode(explanation));
       }
       const summary = details.querySelector('summary');
-      if (summary) summary.textContent = details.open ? 'Hide shell command' : 'Show shell command';
+      const summaryText = details.open ? 'Hide shell command' : 'Show shell command';
+      // MutationObserver watches this panel.  Avoid rewriting an identical
+      // label, which would otherwise schedule another observer callback.
+      if (summary && summary.textContent !== summaryText) summary.textContent = summaryText;
       if (!details.dataset.persistenceBound) {
         details.dataset.persistenceBound = 'true';
         details.addEventListener('toggle', () => {
           if (details.open) openCommands.add(key); else openCommands.delete(key);
           const label = details.querySelector('summary');
-          if (label) label.textContent = details.open ? 'Hide shell command' : 'Show shell command';
+          const labelText = details.open ? 'Hide shell command' : 'Show shell command';
+          if (label && label.textContent !== labelText) label.textContent = labelText;
         });
       }
     });
