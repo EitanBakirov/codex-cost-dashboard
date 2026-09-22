@@ -47,7 +47,7 @@ INSPECTOR_ENHANCEMENTS = """
 <style>
 .tool-category{display:inline-flex;margin-right:7px;padding:2px 6px;border:1px solid #7692b950;border-radius:5px;background:#6f8fc51a;color:#afc6ea;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:1px}
 .tool-call{padding:0;overflow:hidden;background:#1b1b1b}.tool-head{padding:12px 11px 5px;border:0}.tool-action{margin:0;padding:3px 11px 9px;background:transparent}.tool-outcome{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;border-top:1px solid #35332f;background:#1a1a1a}.tool-outcome .tool-meta,.tool-outcome .tool-result{margin:0}.tool-outcome .tool-result{text-align:right}.tool-command{margin:0;padding:9px 11px;border-top:1px solid #45413b;background:#171717}.tool-command pre{margin-top:8px}
-.update-notice{margin:14px 0;padding:11px 14px;border:1px solid #6f8fc5;border-radius:11px;background:#1d2939;color:#d8e8ff;display:flex;align-items:center;gap:14px}.update-notice[hidden]{display:none}.update-control{margin-left:8px;padding:5px 8px;font-size:11px;font-weight:700;vertical-align:middle}
+.update-control{margin-left:8px;padding:5px 8px;font-size:11px;font-weight:700;vertical-align:middle}.update-status{display:inline-block;margin-left:7px;color:#b9d2f2;font-size:11px;vertical-align:middle;transition:opacity .3s}.update-status.changed{color:#edc36e}.update-status.error{color:#ff9ca5}.update-status[hidden]{display:none}
 </style>
 <script>
 (() => {
@@ -131,33 +131,36 @@ INSPECTOR_ENHANCEMENTS = """
   new MutationObserver(decorateTools).observe(document.getElementById('pTools'), {childList: true, subtree: true});
   decorateTools();
 
-  const updateNotice = document.createElement('div');
-  updateNotice.className = 'update-notice';
-  updateNotice.hidden = true;
-  const updateMessage = document.createElement('span');
+  const updateStatus = document.createElement('span');
+  updateStatus.className = 'update-status';
+  updateStatus.hidden = true;
   const checkButton = document.createElement('button');
   checkButton.type = 'button';
   checkButton.textContent = 'Check official updates';
   checkButton.title = 'Fetches public OpenAI pricing and model documentation only; no local dashboard data is sent.';
-  updateNotice.append(updateMessage);
-  document.querySelector('nav.tabs').before(updateNotice);
   checkButton.className = 'update-control';
-  document.querySelector('footer').append(' · ', checkButton);
+  document.querySelector('footer').append(' · ', checkButton, updateStatus);
 
+  let clearUpdateStatus;
   const renderUpdateStatus = (status, showSuccess = false) => {
+    clearTimeout(clearUpdateStatus);
+    updateStatus.className = 'update-status';
     if (status.changed) {
-      updateMessage.textContent = 'Official OpenAI pricing or model documentation changed. Your estimates remain pinned to this installed rate card until a dashboard update is published.';
-      updateNotice.hidden = false;
+      updateStatus.textContent = 'OpenAI pricing/models changed — dashboard estimates remain pinned until an update is published.';
+      updateStatus.classList.add('changed');
+      updateStatus.hidden = false;
     } else if (status.error) {
-      updateMessage.textContent = 'Official update check could not reach OpenAI documentation. Local estimates are unaffected.';
-      updateNotice.hidden = false;
+      updateStatus.textContent = 'Could not reach official docs. Local estimates are unaffected.';
+      updateStatus.classList.add('error');
+      updateStatus.hidden = false;
     } else if (showSuccess) {
-      updateMessage.textContent = status.baseline_established
-        ? 'Official OpenAI documentation checked. This is the local baseline for future change detection.'
-        : 'Official OpenAI documentation checked. No pricing or model changes were detected.';
-      updateNotice.hidden = false;
+      updateStatus.textContent = status.baseline_established
+        ? 'Checked — baseline saved.'
+        : 'Checked — no pricing or model changes.';
+      updateStatus.hidden = false;
+      clearUpdateStatus = setTimeout(() => { updateStatus.hidden = true; }, 7000);
     } else {
-      updateNotice.hidden = true;
+      updateStatus.hidden = true;
     }
   };
   const refreshUpdateStatus = async () => {
