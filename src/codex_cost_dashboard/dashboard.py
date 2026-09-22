@@ -47,7 +47,7 @@ INSPECTOR_ENHANCEMENTS = """
 <style>
 .tool-category{display:inline-flex;margin-right:7px;padding:2px 6px;border:1px solid #7692b950;border-radius:5px;background:#6f8fc51a;color:#afc6ea;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:1px}
 .tool-call{padding:0;overflow:hidden;background:#1b1b1b}.tool-head{padding:12px 11px 5px;border:0}.tool-action{margin:0;padding:3px 11px 9px;background:transparent}.tool-outcome{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;border-top:1px solid #35332f;background:#1a1a1a}.tool-outcome .tool-meta,.tool-outcome .tool-result{margin:0}.tool-outcome .tool-result{text-align:right}.tool-command{margin:0;padding:9px 11px;border-top:1px solid #45413b;background:#171717}.tool-command pre{margin-top:8px}
-.update-control{margin-left:8px;padding:5px 8px;font-size:11px;font-weight:700;vertical-align:middle}.update-status{display:inline-block;margin-left:7px;color:#b9d2f2;font-size:11px;vertical-align:middle;transition:opacity .3s}.update-status.changed{color:#edc36e}.update-status.error{color:#ff9ca5}.update-status[hidden]{display:none}
+.update-control{margin-left:8px;padding:5px 8px;font-size:11px;font-weight:700;vertical-align:middle}.update-status{display:inline-block;margin-left:7px;color:#b9d2f2;font-size:11px;vertical-align:middle;transition:opacity .3s}.update-status a{color:inherit;font-weight:750;text-decoration:underline;text-underline-offset:2px}.update-status.changed{color:#edc36e}.update-status.error{color:#ff9ca5}.update-status[hidden]{display:none}
 </style>
 <script>
 (() => {
@@ -142,21 +142,36 @@ INSPECTOR_ENHANCEMENTS = """
   document.querySelector('footer').append(' · ', checkButton, updateStatus);
 
   let clearUpdateStatus;
+  const sourceLinks = () => {
+    const links = document.createDocumentFragment();
+    links.append(' · ');
+    [['Pricing', 'https://learn.chatgpt.com/docs/pricing'], ['Models', 'https://learn.chatgpt.com/docs/models']].forEach(([label, href], index) => {
+      if (index) links.append(' · ');
+      const link = document.createElement('a');
+      link.textContent = label;
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      links.append(link);
+    });
+    return links;
+  };
   const renderUpdateStatus = (status, showSuccess = false) => {
     clearTimeout(clearUpdateStatus);
     updateStatus.className = 'update-status';
+    updateStatus.replaceChildren();
     if (status.changed) {
-      updateStatus.textContent = 'OpenAI pricing/models changed — dashboard estimates remain pinned until an update is published.';
+      updateStatus.append('OpenAI pricing/models changed — estimates remain pinned until an update is published.', sourceLinks());
       updateStatus.classList.add('changed');
       updateStatus.hidden = false;
     } else if (status.error) {
-      updateStatus.textContent = 'Could not reach official docs. Local estimates are unaffected.';
+      updateStatus.append('Could not reach official docs. Local estimates are unaffected.', sourceLinks());
       updateStatus.classList.add('error');
       updateStatus.hidden = false;
     } else if (showSuccess) {
-      updateStatus.textContent = status.baseline_established
+      updateStatus.append(status.baseline_established
         ? 'Checked — baseline saved.'
-        : 'Checked — no pricing or model changes.';
+        : 'Checked — no pricing or model changes.', sourceLinks());
       updateStatus.hidden = false;
       clearUpdateStatus = setTimeout(() => { updateStatus.hidden = true; }, 7000);
     } else {
