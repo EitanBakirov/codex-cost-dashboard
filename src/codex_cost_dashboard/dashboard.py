@@ -31,6 +31,8 @@ from .monitor import (
     logical_session_paths,
     read_events,
 )
+from .openai_updates import check_official_updates, load_update_state
+from .rate_card import RATE_CARD_DESCRIPTION, RATE_CARD_SOURCE, RATE_CARD_VERSION
 
 
 DEFAULT_STATE_FILE = DEFAULT_CODEX_HOME / "cost-dashboard" / "dashboard-state.json"
@@ -46,6 +48,7 @@ INSPECTOR_ENHANCEMENTS = """
 <style>
 .tool-category{display:inline-flex;margin-right:7px;padding:2px 6px;border:1px solid #7692b950;border-radius:5px;background:#6f8fc51a;color:#afc6ea;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:1px}
 .tool-call{padding:0;overflow:hidden;background:#1b1b1b}.tool-head{padding:12px 11px 5px;border:0}.tool-action{margin:0;padding:3px 11px 9px;background:transparent}.tool-outcome{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;border-top:1px solid #35332f;background:#1a1a1a}.tool-outcome .tool-meta,.tool-outcome .tool-result{margin:0}.tool-outcome .tool-result{text-align:right}.tool-command{margin:0;padding:9px 11px;border-top:1px solid #45413b;background:#171717}.tool-command pre{margin-top:8px}
+.update-notice{margin:14px 0;padding:11px 14px;border:1px solid #6f8fc5;border-radius:11px;background:#1d2939;color:#d8e8ff;display:flex;align-items:center;justify-content:space-between;gap:14px}.update-notice[hidden]{display:none}.update-notice button{white-space:nowrap}
 </style>
 <script>
 (() => {
@@ -128,6 +131,44 @@ INSPECTOR_ENHANCEMENTS = """
   };
   new MutationObserver(decorateTools).observe(document.getElementById('pTools'), {childList: true, subtree: true});
   decorateTools();
+
+  const updateNotice = document.createElement('div');
+  updateNotice.className = 'update-notice';
+  updateNotice.hidden = true;
+  const updateMessage = document.createElement('span');
+  const checkButton = document.createElement('button');
+  checkButton.type = 'button';
+  checkButton.textContent = 'Check official updates';
+  checkButton.title = 'Fetches public OpenAI pricing and model documentation only; no local dashboard data is sent.';
+  updateNotice.append(updateMessage);
+  document.querySelector('nav.tabs').before(updateNotice);
+  document.querySelector('.global-controls').append(checkButton);
+
+  const renderUpdateStatus = status => {
+    if (status.changed) {
+      updateMessage.textContent = 'Official OpenAI pricing or model documentation changed. Your estimates remain pinned to this installed rate card until a dashboard update is published.';
+      updateNotice.hidden = false;
+    } else if (status.error) {
+      updateMessage.textContent = 'Official update check could not reach OpenAI documentation. Local estimates are unaffected.';
+      updateNotice.hidden = false;
+    } else {
+      updateNotice.hidden = true;
+    }
+  };
+  const refreshUpdateStatus = async () => {
+    try { renderUpdateStatus(await fetch('/api/updates', {cache: 'no-store'}).then(response => response.json())); } catch (_) {}
+  };
+  checkButton.addEventListener('click', async () => {
+    checkButton.disabled = true;
+    checkButton.textContent = 'Checking official docs…';
+    try {
+      renderUpdateStatus(await fetch('/api/updates/check', {method: 'POST', cache: 'no-store'}).then(response => response.json()));
+    } finally {
+      checkButton.disabled = false;
+      checkButton.textContent = 'Check official updates';
+    }
+  });
+  refreshUpdateStatus();
 })();
 </script>
 """
@@ -389,6 +430,11 @@ def state_dict(state: SessionState, usd_per_credit: float, selection: dict[str, 
         "context": {"tokens": state.current_context_tokens, "window": state.context_window, "percent": context_percent},
         "plan": format_plan_snapshot(state.plan_used_percent, state.plan_reset_at, state.plan_observed_at),
         "selection": selection,
+        "rate_card": {
+            "version": RATE_CARD_VERSION,
+            "description": RATE_CARD_DESCRIPTION,
+            "source": RATE_CARD_SOURCE,
+        },
     }
 
 
@@ -583,11 +629,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 "application/json; charset=utf-8",
                 json.dumps(self.server.global_snapshot(range_name, force="refresh=1" in query)).encode("utf-8"),
             )
+        elif route == "/api/updates":
+            self.send_body(200, "application/json; charset=utf-8", json.dumps(self.server.update_status()).encode("utf-8"))
         else:
             self.send_body(404, "text/plain; charset=utf-8", b"Not found")
 
     def do_POST(self) -> None:  # noqa: N802
-        if urlparse(self.path).path != "/api/select":
+        route = urlparse(self.path).path
+        if route == "/api/updates/check":
+            self.send_body(200, "application/json; charset=utf-8", json.dumps(self.server.check_updates(force=True)).encode("utf-8"))
+            return
+        if route != "/api/select":
             self.send_body(404, "text/plain; charset=utf-8", b"Not found")
             return
         try:
@@ -604,10 +656,20 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 
 class DashboardServer(ThreadingHTTPServer):
-    def __init__(self, address: tuple[str, int], sessions_dir: Path, state_file: Path, usd_per_credit: float) -> None:
+    def __init__(
+        self,
+        address: tuple[str, int],
+        sessions_dir: Path,
+        state_file: Path,
+        usd_per_credit: float,
+        update_state_file: Path | None = None,
+        check_updates_daily: bool = False,
+    ) -> None:
         self.sessions_dir = sessions_dir.resolve()
         self.state_file = state_file
         self.usd_per_credit = usd_per_credit
+        self.update_state_file = update_state_file or state_file.with_name("openai-update-state.json")
+        self.check_updates_daily = check_updates_daily
         self.lock = threading.Lock()
         self.selection = self.load_selection()
         self.follower = self.new_follower(self.selection)
@@ -676,7 +738,23 @@ class DashboardServer(ThreadingHTTPServer):
             plan = cached_plan[1]
         result["plan"] = plan
         result["account"] = local_account(self.sessions_dir.parent / "auth.json")
+        result["updates"] = self.update_status()
         return result
+
+    def update_status(self) -> dict[str, Any]:
+        status = load_update_state(self.update_state_file)
+        return {
+            "enabled": self.check_updates_daily,
+            "checked_at": status.get("checked_at"),
+            "changed": bool(status.get("changed")),
+            "baseline_established": bool(status.get("baseline_established")),
+            "error": status.get("error"),
+            "sources": status.get("sources", {}),
+        }
+
+    def check_updates(self, force: bool = False) -> dict[str, Any]:
+        result = check_official_updates(self.update_state_file, force=force)
+        return {**self.update_status(), **result, "enabled": self.check_updates_daily}
 
     def global_snapshot(self, range_name: str, force: bool = False) -> dict[str, Any]:
         range_name = range_name if range_name in {"today", "workday", "7d", "all"} else "all"
@@ -702,6 +780,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--usd-per-credit", type=float, default=DEFAULT_USD_PER_CREDIT)
     parser.add_argument("--port", type=int, default=8766)
     parser.add_argument("--open", action="store_true", help="Open the dashboard in the default browser.")
+    parser.add_argument(
+        "--check-openai-updates",
+        action="store_true",
+        help="Check public official OpenAI pricing and model docs, print the local result, then exit.",
+    )
+    parser.add_argument(
+        "--check-openai-updates-daily",
+        action="store_true",
+        help="Opt in to one public official-doc update check at most once per day when the dashboard starts.",
+    )
     return parser.parse_args()
 
 
@@ -710,9 +798,27 @@ def main() -> int:
     if not 1 <= args.port <= 65535:
         print("--port must be between 1 and 65535", file=sys.stderr)
         return 2
+    update_state_file = args.state_file.expanduser().with_name("openai-update-state.json")
+    if args.check_openai_updates:
+        result = check_official_updates(update_state_file, force=True)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 1 if result.get("error") else 0
+    if args.check_openai_updates_daily:
+        result = check_official_updates(update_state_file)
+        if result.get("error"):
+            print("OpenAI update check: could not reach official documentation", file=sys.stderr)
+        elif result.get("checked"):
+            print("OpenAI update check: " + ("official documentation changed" if result.get("changed") else "up to date"))
     url = f"http://127.0.0.1:{args.port}"
     try:
-        server = DashboardServer(("127.0.0.1", args.port), args.sessions_dir.expanduser(), args.state_file.expanduser(), args.usd_per_credit)
+        server = DashboardServer(
+            ("127.0.0.1", args.port),
+            args.sessions_dir.expanduser(),
+            args.state_file.expanduser(),
+            args.usd_per_credit,
+            update_state_file,
+            args.check_openai_updates_daily,
+        )
     except (FileNotFoundError, OSError) as error:
         print(f"Could not start dashboard at {url}: {error}", file=sys.stderr)
         return 1

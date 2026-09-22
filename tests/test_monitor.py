@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from codex_cost_dashboard.monitor import (
+    MODEL_RATES,
     PromptRun,
     SessionFollower,
     SessionState,
@@ -11,6 +12,7 @@ from codex_cost_dashboard.monitor import (
     describe_tool_call,
     is_primary_session,
     read_events,
+    normalize_model,
 )
 
 
@@ -203,6 +205,12 @@ class MonitorParserTests(unittest.TestCase):
                 )
                 self.assertEqual(tool["category"], category)
                 self.assertEqual(tool["action"], action)
+
+    def test_current_credit_rate_card_and_daybreak_aliases_are_known(self):
+        self.assertEqual(MODEL_RATES["gpt-6-sol"], (50.0, 5.0, 250.0))
+        self.assertEqual(MODEL_RATES["gpt-5.6-terra"], (50.0, 5.0, 300.0))
+        self.assertEqual(normalize_model("gpt-daybreak-blue-latest"), "gpt-5.6-sol")
+        self.assertEqual(normalize_model("gpt-daybreak-red-latest"), "gpt-5.6-cyber")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ It reads the Codex session logs already stored on your computer, serves the dash
 ## What it shows
 
 - A global view for the last 24 hours, since 7 AM, seven days, or all local history
-- Estimated cost, credits, fresh input, cached input, and output tokens
+- Estimated credit use, a configurable dollar equivalent, fresh input, cached input, and output tokens
 - Current locally observed plan allowance and reset time
 - Model usage mix
 - Task/session totals and prompt-by-prompt history
@@ -86,13 +86,40 @@ Give your local coding agent this prompt:
 ```text
 codex-cost-dashboard [--sessions-dir PATH] [--state-file PATH]
                      [--usd-per-credit NUMBER] [--port PORT] [--open]
+                     [--check-openai-updates]
+                     [--check-openai-updates-daily]
 ```
 
 - `--sessions-dir`: override the default `$CODEX_HOME/sessions`
 - `--state-file`: change where the selected-task preference is saved
-- `--usd-per-credit`: customize the dollar-equivalent estimate
+- `--usd-per-credit`: customize the dollar-equivalent estimate. Credit purchase prices and discounts vary by plan, so this is not an invoice.
 - `--port`: use another localhost port if `8766` is occupied
 - `--open`: open the page in the default browser
+- `--check-openai-updates`: explicitly fetch the two public official OpenAI documentation pages, report whether they changed, then exit
+- `--check-openai-updates-daily`: opt in to at most one public documentation check per day when the dashboard starts. The Global / Plan page also has a **Check official updates** button for an explicit one-time check.
+
+## Pricing and model maintenance
+
+The bundled rate card is versioned with each dashboard release. It currently
+uses the official ChatGPT **Standard-speed credit** rates, not API-key USD
+prices. This distinction matters: ChatGPT credits are what Codex with ChatGPT
+sign-in consumes, while API-key sessions use separate API pricing.
+
+The dashboard never automatically downloads or activates a new rate card. An
+optional update check compares only these public documents:
+
+- [Codex pricing and credit rates](https://learn.chatgpt.com/docs/pricing)
+- [Codex models and retirements](https://learn.chatgpt.com/docs/models)
+
+When either document changes, the dashboard shows a notice. Estimates remain
+pinned to the installed rate card until a reviewed dashboard release updates
+it. This prevents a silently changed webpage from rewriting local estimates.
+
+For a manual terminal check:
+
+```bash
+python -m codex_cost_dashboard.dashboard --check-openai-updates
+```
 
 The companion `codex-cost-monitor` command provides a live terminal view. Use `codex-cost-monitor --help` for its options.
 
@@ -107,12 +134,13 @@ The dashboard reads:
 It writes only:
 
 - `$CODEX_HOME/cost-dashboard/dashboard-state.json`
+- `$CODEX_HOME/cost-dashboard/openai-update-state.json` only after an explicit update check or when the daily opt-in is enabled
 
-It does not modify Codex sessions or authentication. No analytics, telemetry, CDN, external fonts, API requests, or update checks are included. See [SECURITY.md](SECURITY.md) for the detailed boundary.
+It does not modify Codex sessions or authentication. By default it makes no external requests: no analytics, telemetry, CDN, external fonts, API calls, or background update checks. The optional update check contacts only the two public official documentation URLs listed above and sends no local session, token, account, or usage data. See [SECURITY.md](SECURITY.md) for the detailed boundary.
 
 ## Accuracy and limitations
 
-- Estimates use token counters written to local Codex session logs and the rate table bundled with this release.
+- Estimates use token counters written to local Codex session logs and the rate table bundled with this release. The current rate-card version and source are exposed in the local API.
 - Included allowance, Fast mode, discounts, taxes, invoice adjustments, and server-side accounting are not available locally.
 - The plan percentage is the latest rate-limit snapshot observed in local logs for the active account. Historical session logs may belong to a different account.
 - Old sessions generally cannot be assigned reliably to an account because their logs may not contain account identity.

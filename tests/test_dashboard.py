@@ -5,6 +5,7 @@ import threading
 import unittest
 import urllib.request
 from pathlib import Path
+from unittest.mock import patch
 
 from codex_cost_dashboard.dashboard import (
     DashboardServer,
@@ -15,6 +16,7 @@ from codex_cost_dashboard.dashboard import (
     short_local_path,
 )
 from codex_cost_dashboard.monitor import PromptRun
+from codex_cost_dashboard.openai_updates import check_official_updates
 
 
 def encode_segment(value):
@@ -96,6 +98,8 @@ class PreviewTests(unittest.TestCase):
         self.assertIn("openCommands", HTML)
         self.assertIn("tool-category", HTML)
         self.assertIn("tool-outcome", HTML)
+        self.assertIn("Check official updates", HTML)
+        self.assertIn("/api/updates", HTML)
 
 
 class AccountTests(unittest.TestCase):
@@ -128,6 +132,34 @@ class AccountTests(unittest.TestCase):
         )
 
 
+class OfficialUpdateTests(unittest.TestCase):
+    class FakeResponse:
+        def __init__(self, content):
+            self.content = content
+            self.headers = {"ETag": '"fixture"', "Last-Modified": "Tue, 23 Sep 2026 00:00:00 GMT"}
+
+        def read(self):
+            return self.content
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    def test_check_establishes_a_baseline_then_detects_a_document_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "updates.json"
+            with patch("codex_cost_dashboard.openai_updates.urlopen", side_effect=[self.FakeResponse(b"pricing v1"), self.FakeResponse(b"models v1")]):
+                first = check_official_updates(path, force=True)
+            self.assertTrue(first["baseline_established"])
+            self.assertFalse(first["changed"])
+            with patch("codex_cost_dashboard.openai_updates.urlopen", side_effect=[self.FakeResponse(b"pricing v2"), self.FakeResponse(b"models v1")]):
+                second = check_official_updates(path, force=True)
+            self.assertTrue(second["changed"])
+            self.assertFalse(second["baseline_established"])
+
+
 class ServerSmokeTests(unittest.TestCase):
     def test_local_server_serves_dashboard_and_json(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -151,6 +183,8 @@ class ServerSmokeTests(unittest.TestCase):
                 self.assertEqual(payload["prompt_count"], 1)
                 self.assertEqual(payload["plan"]["used_percent"], 25)
                 self.assertEqual(payload["account"]["email"], None)
+                self.assertEqual(payload["rate_card"]["version"], "2026-09-23")
+                self.assertFalse(payload["updates"]["enabled"])
             finally:
                 server.shutdown()
                 server.server_close()

@@ -21,6 +21,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from .rate_card import MODEL_ALIASES, MODEL_RATES
+
 
 def codex_home() -> Path:
     """Return Codex's user-level data directory on every supported OS."""
@@ -31,20 +33,6 @@ def codex_home() -> Path:
 DEFAULT_CODEX_HOME = codex_home()
 DEFAULT_SESSIONS_DIR = DEFAULT_CODEX_HOME / "sessions"
 DEFAULT_USD_PER_CREDIT = 0.04
-
-# Credits per one million tokens. Source checked 2026-08-04:
-# https://help.openai.com/en/articles/20001106-codex-rate-card.docx
-MODEL_RATES: dict[str, tuple[float, float, float]] = {
-    "gpt-5.6-sol": (125.0, 12.5, 750.0),
-    "gpt-5.6-terra": (62.5, 6.25, 375.0),
-    "gpt-5.6-luna": (25.0, 2.5, 150.0),
-    "gpt-5.5": (125.0, 12.5, 750.0),
-    "gpt-5.5-cyber": (312.5, 31.25, 1875.0),
-    "gpt-5.4": (62.5, 6.25, 375.0),
-    "gpt-5.4-mini": (18.75, 1.875, 113.0),
-    "gpt-5.3-codex": (43.75, 4.375, 350.0),
-    "gpt-5.2": (43.75, 4.375, 350.0),
-}
 
 
 @dataclass
@@ -151,11 +139,7 @@ def normalize_model(model: str | None) -> str:
     if not model:
         return ""
     normalized = model.lower().replace("_", "-")
-    aliases = {
-        "gpt-5.4-mini-codex": "gpt-5.4-mini",
-        "gpt-5.5-codex": "gpt-5.5",
-    }
-    return aliases.get(normalized, normalized)
+    return MODEL_ALIASES.get(normalized, normalized)
 
 
 def usage_from_dict(value: dict[str, Any] | None) -> Usage:
