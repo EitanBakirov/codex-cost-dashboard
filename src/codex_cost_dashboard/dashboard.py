@@ -28,7 +28,6 @@ from .monitor import (
     consume_event,
     is_primary_session,
     logical_session_id,
-    logical_session_paths,
     read_events,
 )
 from .openai_updates import check_official_updates, load_update_state
@@ -48,7 +47,7 @@ INSPECTOR_ENHANCEMENTS = """
 <style>
 .tool-category{display:inline-flex;margin-right:7px;padding:2px 6px;border:1px solid #7692b950;border-radius:5px;background:#6f8fc51a;color:#afc6ea;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:1px}
 .tool-call{padding:0;overflow:hidden;background:#1b1b1b}.tool-head{padding:12px 11px 5px;border:0}.tool-action{margin:0;padding:3px 11px 9px;background:transparent}.tool-outcome{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;border-top:1px solid #35332f;background:#1a1a1a}.tool-outcome .tool-meta,.tool-outcome .tool-result{margin:0}.tool-outcome .tool-result{text-align:right}.tool-command{margin:0;padding:9px 11px;border-top:1px solid #45413b;background:#171717}.tool-command pre{margin-top:8px}
-.update-notice{margin:14px 0;padding:11px 14px;border:1px solid #6f8fc5;border-radius:11px;background:#1d2939;color:#d8e8ff;display:flex;align-items:center;justify-content:space-between;gap:14px}.update-notice[hidden]{display:none}.update-notice button{white-space:nowrap}
+.update-notice{margin:14px 0;padding:11px 14px;border:1px solid #6f8fc5;border-radius:11px;background:#1d2939;color:#d8e8ff;display:flex;align-items:center;gap:14px}.update-notice[hidden]{display:none}.update-control{margin-left:8px;padding:5px 8px;font-size:11px;font-weight:700;vertical-align:middle}
 </style>
 <script>
 (() => {
@@ -142,14 +141,20 @@ INSPECTOR_ENHANCEMENTS = """
   checkButton.title = 'Fetches public OpenAI pricing and model documentation only; no local dashboard data is sent.';
   updateNotice.append(updateMessage);
   document.querySelector('nav.tabs').before(updateNotice);
-  document.querySelector('.global-controls').append(checkButton);
+  checkButton.className = 'update-control';
+  document.querySelector('footer').append(' · ', checkButton);
 
-  const renderUpdateStatus = status => {
+  const renderUpdateStatus = (status, showSuccess = false) => {
     if (status.changed) {
       updateMessage.textContent = 'Official OpenAI pricing or model documentation changed. Your estimates remain pinned to this installed rate card until a dashboard update is published.';
       updateNotice.hidden = false;
     } else if (status.error) {
       updateMessage.textContent = 'Official update check could not reach OpenAI documentation. Local estimates are unaffected.';
+      updateNotice.hidden = false;
+    } else if (showSuccess) {
+      updateMessage.textContent = status.baseline_established
+        ? 'Official OpenAI documentation checked. This is the local baseline for future change detection.'
+        : 'Official OpenAI documentation checked. No pricing or model changes were detected.';
       updateNotice.hidden = false;
     } else {
       updateNotice.hidden = true;
@@ -162,7 +167,7 @@ INSPECTOR_ENHANCEMENTS = """
     checkButton.disabled = true;
     checkButton.textContent = 'Checking official docs…';
     try {
-      renderUpdateStatus(await fetch('/api/updates/check', {method: 'POST', cache: 'no-store'}).then(response => response.json()));
+      renderUpdateStatus(await fetch('/api/updates/check', {method: 'POST', cache: 'no-store'}).then(response => response.json()), true);
     } finally {
       checkButton.disabled = false;
       checkButton.textContent = 'Check official updates';
@@ -465,25 +470,31 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
 
     meter = MeteredUsage()
     prompt_count = 0
-    task_count = 0
     model_counts: dict[str, int] = {}
+    paths: list[Path] = []
     try:
-        paths = list(sessions_dir.rglob("*.jsonl"))
+        for path in sessions_dir.rglob("*.jsonl"):
+            # A log cannot contain a new prompt without its modification time
+            # changing. For bounded ranges this safely avoids parsing years of
+            # unrelated local history on every overview calculation.
+            if window_start and datetime.fromtimestamp(path.stat().st_mtime).astimezone() < window_start:
+                continue
+            paths.append(path)
     except OSError:
-        paths = []
-    seen_tasks: set[str] = set()
+        pass
+    included_task_ids: set[str] = set()
     for path in paths:
         try:
             if not is_primary_session(path):
                 continue
             task_id = logical_session_id(path)
-            if task_id in seen_tasks:
-                continue
-            seen_tasks.add(task_id)
             state = SessionState(path=path)
-            for fragment in logical_session_paths(sessions_dir, path):
-                with fragment.open("r", encoding="utf-8") as log:
-                    read_events(log, state)
+            # Read each physical log once. Resolving every continuation for
+            # every task previously rescanned the complete archive repeatedly.
+            # Prompts are already unique to their JSONL fragment, and task IDs
+            # remain deduplicated for the displayed task total.
+            with path.open("r", encoding="utf-8") as log:
+                read_events(log, state)
         except OSError:
             continue
         included_prompts: list[PromptRun] = []
@@ -493,7 +504,9 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
                 included_prompts.append(prompt)
         if not included_prompts:
             continue
-        task_count += 1
+        # A continuing task may have several physical log fragments in the
+        # selected range; show it once while retaining every prompt's usage.
+        included_task_ids.add(task_id)
         for prompt in included_prompts:
             meter.usage.add(prompt.meter.usage)
             meter.credits += prompt.meter.credits
@@ -509,7 +522,7 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
     return {
         **usage_dict(meter, usd_per_credit),
         "prompt_count": prompt_count,
-        "task_count": task_count,
+        "task_count": len(included_task_ids),
         "model_mix": [
             {"model": model, "prompt_count": count, "percent": round(count * 100 / prompt_count)}
             for model, count in sorted(model_counts.items(), key=lambda item: (-item[1], item[0]))
@@ -519,6 +532,21 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
         "range_start": window_start.isoformat() if window_start else None,
         "range_end": now.isoformat(),
     }
+
+
+def session_file_signature(sessions_dir: Path) -> tuple[tuple[str, int, int], ...]:
+    """Cheap change detector for the append-only local session archive."""
+    entries: list[tuple[str, int, int]] = []
+    try:
+        for path in sessions_dir.rglob("*.jsonl"):
+            try:
+                stat = path.stat()
+                entries.append((str(path.relative_to(sessions_dir)), stat.st_size, stat.st_mtime_ns))
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return tuple(sorted(entries))
 
 
 def thread_names(index_path: Path) -> dict[str, str]:
@@ -673,7 +701,7 @@ class DashboardServer(ThreadingHTTPServer):
         self.lock = threading.Lock()
         self.selection = self.load_selection()
         self.follower = self.new_follower(self.selection)
-        self.global_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self.global_cache: dict[str, tuple[tuple[tuple[str, int, int], ...], dict[str, Any]]] = {}
         self.plan_cache: tuple[float, dict[str, Any]] | None = None
         try:
             super().__init__(address, DashboardHandler)
@@ -758,14 +786,16 @@ class DashboardServer(ThreadingHTTPServer):
 
     def global_snapshot(self, range_name: str, force: bool = False) -> dict[str, Any]:
         range_name = range_name if range_name in {"today", "workday", "7d", "all"} else "all"
-        now = datetime.now().timestamp()
+        signature = session_file_signature(self.sessions_dir)
         with self.lock:
             cached = self.global_cache.get(range_name)
-            if not force and cached and now - cached[0] < 10:
-                return cached[1]
+            if cached and cached[0] == signature:
+                # Refreshing a stable archive should be instant; only the
+                # display's observation time changes.
+                return {**cached[1], "range_end": datetime.now().astimezone().isoformat()}
         result = aggregate_sessions(self.sessions_dir, self.usd_per_credit, range_name)
         with self.lock:
-            self.global_cache[range_name] = (now, result)
+            self.global_cache[range_name] = (signature, result)
         return result
 
     def close_monitor(self) -> None:
