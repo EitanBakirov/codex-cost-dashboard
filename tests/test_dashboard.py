@@ -157,6 +157,7 @@ class OfficialUpdateTests(unittest.TestCase):
             with patch("codex_cost_dashboard.openai_updates.urlopen", side_effect=[self.FakeResponse(b"pricing v2"), self.FakeResponse(b"models v1")]):
                 second = check_official_updates(path, force=True)
             self.assertTrue(second["changed"])
+            self.assertEqual(second["changed_sources"], ["pricing"])
             self.assertFalse(second["baseline_established"])
 
 

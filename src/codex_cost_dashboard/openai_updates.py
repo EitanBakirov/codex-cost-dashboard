@@ -82,14 +82,17 @@ def check_official_updates(path: Path, *, force: bool = False, now: datetime | N
 
     old_sources = previous.get("sources") if isinstance(previous.get("sources"), dict) else {}
     baseline_exists = bool(old_sources)
-    changed = baseline_exists and any(
-        old_sources.get(name, {}).get("sha256") != source["sha256"] for name, source in sources.items()
-    )
+    changed_sources = [
+        name
+        for name, source in sources.items()
+        if baseline_exists and old_sources.get(name, {}).get("sha256") != source["sha256"]
+    ]
     result = {
         "checked": True,
         "checked_at": now.isoformat(),
         "sources": sources,
-        "changed": changed,
+        "changed": bool(changed_sources),
+        "changed_sources": changed_sources,
         "baseline_established": not baseline_exists,
         "error": None,
     }

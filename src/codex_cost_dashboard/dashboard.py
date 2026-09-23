@@ -168,7 +168,10 @@ footer{display:block}footer>.footer-copy{display:block}.update-cluster{display:i
     updateStatus.className = 'update-status';
     updateStatus.replaceChildren();
     if (status.changed) {
-      updateStatus.append('OpenAI pricing/models changed — estimates remain pinned until an update is published.', sourceLinks());
+      const changedPages = Array.isArray(status.changed_sources) && status.changed_sources.length
+        ? status.changed_sources.join(' and ')
+        : 'the tracked';
+      updateStatus.append('Official ' + changedPages + ' documentation changed — review before updating rates. Estimates remain pinned.', sourceLinks());
       updateStatus.classList.add('changed');
       updateStatus.hidden = false;
     } else if (status.error) {
@@ -800,6 +803,7 @@ class DashboardServer(ThreadingHTTPServer):
             "enabled": self.check_updates_daily,
             "checked_at": status.get("checked_at"),
             "changed": bool(status.get("changed")),
+            "changed_sources": status.get("changed_sources", []),
             "baseline_established": bool(status.get("baseline_established")),
             "error": status.get("error"),
             "sources": status.get("sources", {}),
