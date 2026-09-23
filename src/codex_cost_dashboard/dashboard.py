@@ -47,7 +47,7 @@ INSPECTOR_ENHANCEMENTS = """
 <style>
 .tool-category{display:inline-flex;margin-right:7px;padding:2px 6px;border:1px solid #7692b950;border-radius:5px;background:#6f8fc51a;color:#afc6ea;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:1px}
 .tool-call{padding:0;overflow:hidden;background:#1b1b1b}.tool-head{padding:12px 11px 5px;border:0}.tool-action{margin:0;padding:3px 11px 9px;background:transparent}.tool-outcome{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;border-top:1px solid #35332f;background:#1a1a1a}.tool-outcome .tool-meta,.tool-outcome .tool-result{margin:0}.tool-outcome .tool-result{text-align:right}.tool-command{margin:0;padding:9px 11px;border-top:1px solid #45413b;background:#171717}.tool-command pre{margin-top:8px}
-.update-control{margin-left:8px;padding:5px 8px;font-size:11px;font-weight:700;vertical-align:middle}.update-status{display:inline-block;margin-left:7px;color:#b9d2f2;font-size:11px;vertical-align:middle;transition:opacity .3s}.update-status a{color:inherit;font-weight:750;text-decoration:underline;text-underline-offset:2px}.update-status.changed{color:#edc36e}.update-status.error{color:#ff9ca5}.update-status[hidden]{display:none}
+footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px}footer>.footer-copy{flex:1 1 620px}.update-cluster{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}.update-control{padding:5px 8px;font-size:11px;font-weight:700}.update-status{color:#b9d2f2;font-size:11px;transition:opacity .3s}.update-status a{color:inherit;font-weight:750;text-decoration:underline;text-underline-offset:2px}.update-status.changed{color:#edc36e}.update-status.error{color:#ff9ca5}.update-status[hidden]{display:none}
 </style>
 <script>
 (() => {
@@ -139,7 +139,14 @@ INSPECTOR_ENHANCEMENTS = """
   checkButton.textContent = 'Check official updates';
   checkButton.title = 'Fetches public OpenAI pricing and model documentation only; no local dashboard data is sent.';
   checkButton.className = 'update-control';
-  document.querySelector('footer').append(' · ', checkButton, updateStatus);
+  const footer = document.querySelector('footer');
+  const footerCopy = document.createElement('span');
+  footerCopy.className = 'footer-copy';
+  footerCopy.replaceChildren(...footer.childNodes);
+  const updateCluster = document.createElement('span');
+  updateCluster.className = 'update-cluster';
+  updateCluster.append(checkButton, updateStatus);
+  footer.replaceChildren(footerCopy, updateCluster);
 
   let clearUpdateStatus;
   const sourceLinks = () => {
