@@ -13,7 +13,7 @@ It reads the Codex session logs already stored on your computer, serves the dash
 - Estimated credit use, a configurable dollar equivalent, fresh input, cached input, and output tokens
 - Current locally observed plan allowance and reset time
 - Model usage mix
-- A separate Models & pricing guide with the bundled credit rate table, model roles, reasoning-effort explanations, and a Sol-versus-Terra whole-turn cost comparison
+- A separate Models & pricing guide with the bundled credit rate table, model roles, reasoning-effort explanations, and an informal Sol-versus-Terra comparison from local sample data
 - Task/session totals and prompt-by-prompt history
 - Model, effort, duration, calls, tools, token counts, and estimated cost per prompt
 - Compact skill, image, local-file, and clickable-link markers
@@ -110,8 +110,10 @@ The **Models & pricing** guide is available from the far-right navigation tab.
 Its table reads the same bundled rates as the calculator. It summarizes when
 each general model fits, how fresh/cached/output token rates differ, and why
 higher reasoning effort can change a task's duration and total usage without
-changing its per-token rate. A Sol-versus-Terra comparison explains how extra
-model and tool steps can outweigh a lower output-token rate. The guide is
+changing its per-token rate. An anonymized, fixed sample of 36 Terra and 41
+Sol turns across three tasks illustrates how extra model and tool steps can
+outweigh a lower output-token rate. The sample is illustrative, not a live
+analysis of each installer's logs or a model-quality benchmark. The guide is
 bundled locally, so it does not make network requests when opened.
 
 Celestial model families use small SVG icons before their names throughout the

@@ -28,23 +28,30 @@
   </article>
 
   <article class="card guide-section guide-cost-comparison" aria-labelledby="guide-cost-comparison-title">
-    <div class="guide-section-head"><div><p class="eyebrow">Sol vs Terra</p><h3 id="guide-cost-comparison-title">Why a cheaper rate can cost more per turn</h3></div></div>
-    <p class="guide-help">Token rates price each model call. A turn can make many calls while reading files, using tools, and checking results, so its total depends on how much work it actually does.</p>
+    <div class="guide-section-head"><div><p class="eyebrow">Observed in local tasks</p><h3 id="guide-cost-comparison-title">Sol vs Terra: what a whole turn used</h3></div></div>
+    <p class="guide-help">The rate table above prices tokens. This informal sample shows what happened across complete turns, including repeated model calls and tool use.</p>
     <div class="guide-comparison-grid">
       <div class="guide-comparison-rates">
         <table class="guide-comparison-table">
-          <caption>Standard-speed credits per 1 million tokens</caption>
-          <thead><tr><th scope="col">Token type</th><th scope="col">GPT‑6 Sol</th><th scope="col">GPT‑5.6 Terra</th></tr></thead>
-          <tbody><!-- SOL_TERRA_COMPARISON_ROWS --></tbody>
+          <caption>Three tasks · September 22–24, 2026</caption>
+          <thead><tr><th scope="col">Per turn</th><th scope="col"><span class="model-terra">GPT‑5.6 Terra</span></th><th scope="col"><span class="model-sol">GPT‑6 Sol</span></th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Completed turns</th><td>36</td><td>41</td></tr>
+            <tr><th scope="row">Median elapsed time</th><td>29 sec</td><td>56 sec</td></tr>
+            <tr><th scope="row">Median model calls</th><td>2</td><td>5</td></tr>
+            <tr><th scope="row">Median tool calls</th><td>1</td><td>4</td></tr>
+            <tr><th scope="row">Median estimated credits</th><td>2.10</td><td>7.69</td></tr>
+            <tr><th scope="row">Median $ equivalent</th><td>~$0.08</td><td>~$0.31</td></tr>
+          </tbody>
         </table>
       </div>
       <div class="guide-comparison-explain">
-        <p><strong>Rate:</strong> Both models currently charge the same for fresh and cached input. Sol charges less for output.</p>
-        <p><strong>Whole turn:</strong> More model or tool steps can mean more input, including earlier context billed again as cached input. That can outweigh Sol’s output-rate saving.</p>
-        <p><strong>Elapsed time:</strong> Waiting for commands or external jobs can make a turn much longer without measuring model speed.</p>
+        <p><strong>What happened:</strong> Sol made more model and tool calls before reporting back. Its typical turn took longer and used more estimated credits, despite its lower output-token rate.</p>
+        <p><strong>Why:</strong> More iterations can bring earlier context and tool results into later model calls. Long-running commands can also extend elapsed time without measuring model speed.</p>
+        <p><strong>The choice:</strong> Extra investigation may be worth the time and usage on open-ended work. For bounded work, a shorter, more predictable turn may suit you better.</p>
       </div>
     </div>
-    <p class="guide-footnote">There is no fixed Sol-to-Terra cost or time multiplier. Compare similar tasks and effort settings; included plan usage is not a direct conversion from these credits.</p>
+    <p class="guide-footnote">Sample: 12 completed Terra turns immediately before the switch in each task, then all 41 completed Sol turns after it. Tasks and effort settings differed, so this is an observation, not a controlled model benchmark or a quality score. Elapsed time includes tool waits. Dollar equivalents use $0.04 per credit and are not billed charges or plan percentages.</p>
   </article>
 
   <div class="guide-bottom">
