@@ -1,0 +1,31 @@
+:root {
+  --model-astra: #c4a7ff;
+  --model-sol: #ffbd70;
+  --model-terra: #79cfc5;
+  --model-luna: #a9c1ff;
+}
+
+.model-astra { color: var(--model-astra); }
+.model-sol { color: var(--model-sol); }
+.model-terra { color: var(--model-terra); }
+.model-luna { color: var(--model-luna); }
+#pModel .model-astra { color: var(--model-astra) !important; }
+#pModel .model-sol { color: var(--model-sol) !important; }
+#pModel .model-terra { color: var(--model-terra) !important; }
+#pModel .model-luna { color: var(--model-luna) !important; }
+
+.model-icon {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-right: 5px;
+  vertical-align: -2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.guide-intro h3 .model-icon { width: 21px; height: 21px; margin-right: 8px; vertical-align: -4px; }
+.guide-model .model-icon { margin-right: 7px; }

@@ -76,13 +76,16 @@ GUIDE_HTML = (
     .replace("<!-- MODEL_ROWS -->", model_guide_rows())
 )
 GUIDE_CSS = HTML_PATH.with_name("model_guide.css").read_text(encoding="utf-8")
-HTML = HTML.replace("</head>", f"<style>{GUIDE_CSS}</style></head>", 1)
+MODEL_ICON_CSS = HTML_PATH.with_name("model_icons.css").read_text(encoding="utf-8")
+MODEL_ICON_JS = HTML_PATH.with_name("model_icons.js").read_text(encoding="utf-8")
+HTML = HTML.replace("</head>", f"<style>{GUIDE_CSS}\n{MODEL_ICON_CSS}</style></head>", 1)
 HTML = HTML.replace(
     "</nav>",
     '<button class="tab guide-tab" data-view="guide" type="button" aria-label="Model guide">ⓘ &nbsp;Models &amp; pricing</button></nav>',
     1,
 )
 HTML = HTML.replace("<footer>", GUIDE_HTML + "<footer>", 1)
+HTML = HTML.replace("</body>", f"<script>{MODEL_ICON_JS}</script></body>", 1)
 
 # The bundled dashboard is intentionally a single portable HTML file.  Keep
 # these small inspector enhancements here so the document remains readable

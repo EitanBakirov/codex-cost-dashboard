@@ -105,6 +105,12 @@ class PreviewTests(unittest.TestCase):
         self.assertIn('data-view="guide"', HTML)
         self.assertIn('id="guide" hidden', HTML)
         self.assertIn("What the effort bar changes", HTML)
+        for family in ("astra", "sol", "terra", "luna"):
+            self.assertIn(f"--model-{family}:", HTML)
+            self.assertIn(f"    {family}: '", HTML)
+        self.assertIn("element.prepend(icon)", HTML)
+        self.assertIn("icon.setAttribute('aria-hidden', 'true')", HTML)
+        self.assertNotIn('class="guide-icon"', HTML)
 
     def test_guide_rates_use_the_calculator_rate_card(self):
         sol_fresh, sol_cached, sol_output = MODEL_RATES["gpt-6-sol"]

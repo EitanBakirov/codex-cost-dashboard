@@ -113,6 +113,12 @@ higher reasoning effort can change a task's duration and total usage without
 changing its per-token rate. The guide is bundled locally, so it does not make
 network requests when opened.
 
+Celestial model families use small SVG icons before their names throughout the
+dashboard: stars for Astra, sun for Sol, globe for Terra, and crescent for Luna.
+Their colors are controlled by the four `--model-*` variables in
+`src/codex_cost_dashboard/model_icons.css`; the SVG shapes remain unchanged when
+the palette is adjusted. Numeric or unknown models keep their plain names.
+
 The dashboard never automatically downloads or activates a new rate card. An
 optional update check compares only these public documents:
 

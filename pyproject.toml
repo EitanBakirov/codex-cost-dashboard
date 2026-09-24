@@ -33,4 +33,4 @@ codex-cost-monitor = "codex_cost_dashboard.monitor:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-codex_cost_dashboard = ["dashboard.html", "model_guide.html", "model_guide.css"]
+codex_cost_dashboard = ["dashboard.html", "model_guide.html", "model_guide.css", "model_icons.css", "model_icons.js"]
