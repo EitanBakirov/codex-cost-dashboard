@@ -31,7 +31,7 @@ from .monitor import (
     read_events,
 )
 from .openai_updates import check_official_updates, load_update_state
-from .rate_card import RATE_CARD_DESCRIPTION, RATE_CARD_SOURCE, RATE_CARD_VERSION
+from .rate_card import MODEL_RATES, RATE_CARD_DESCRIPTION, RATE_CARD_SOURCE, RATE_CARD_VERSION
 
 
 DEFAULT_STATE_FILE = DEFAULT_CODEX_HOME / "cost-dashboard" / "dashboard-state.json"
@@ -39,6 +39,50 @@ DEFAULT_AUTH_FILE = DEFAULT_CODEX_HOME / "auth.json"
 
 HTML_PATH = Path(__file__).with_name("dashboard.html")
 HTML = HTML_PATH.read_text(encoding="utf-8")
+
+# The guide's numeric cells come from the exact same bundled rates as the
+# calculator. Descriptions summarize official OpenAI model guidance.
+GUIDE_MODELS = (
+    ("gpt-6-astra", "GPT‑6 Astra", "Hardest sustained work", "Current"),
+    ("gpt-6-sol", "GPT‑6 Sol", "Everyday and complex work", "Current"),
+    ("gpt-6-luna", "GPT‑6 Luna", "Clear, repeatable tasks", "Current"),
+    ("gpt-5.6-sol", "GPT‑5.6 Sol", "Earlier Sol generation", "During rollout"),
+    ("gpt-5.6-terra", "GPT‑5.6 Terra", "Earlier midrange choice", "During rollout"),
+    ("gpt-5.6-luna", "GPT‑5.6 Luna", "Earlier low-cost choice", "During rollout"),
+    ("gpt-5.5", "GPT‑5.5", "Previous flagship", "Retires Oct 14, 2026"),
+)
+
+
+def model_guide_rows() -> str:
+    rows = []
+    for model_id, label, fit, status in GUIDE_MODELS:
+        fresh, cached, output = MODEL_RATES[model_id]
+        rows.append(
+            "<tr>"
+            f'<td class="guide-model">{html.escape(label)}<span class="guide-status">{html.escape(status)}</span></td>'
+            f'<td class="guide-number">{fresh:g}</td>'
+            f'<td class="guide-number">{cached:g}</td>'
+            f'<td class="guide-number">{output:g}</td>'
+            f'<td class="guide-fit">{html.escape(fit)}</td>'
+            "</tr>"
+        )
+    return "".join(rows)
+
+
+GUIDE_PATH = HTML_PATH.with_name("model_guide.html")
+GUIDE_HTML = (
+    GUIDE_PATH.read_text(encoding="utf-8")
+    .replace("<!-- RATE_CARD_VERSION -->", html.escape(RATE_CARD_VERSION))
+    .replace("<!-- MODEL_ROWS -->", model_guide_rows())
+)
+GUIDE_CSS = HTML_PATH.with_name("model_guide.css").read_text(encoding="utf-8")
+HTML = HTML.replace("</head>", f"<style>{GUIDE_CSS}</style></head>", 1)
+HTML = HTML.replace(
+    "</nav>",
+    '<button class="tab guide-tab" data-view="guide" type="button" aria-label="Model guide">ⓘ &nbsp;Models &amp; pricing</button></nav>',
+    1,
+)
+HTML = HTML.replace("<footer>", GUIDE_HTML + "<footer>", 1)
 
 # The bundled dashboard is intentionally a single portable HTML file.  Keep
 # these small inspector enhancements here so the document remains readable

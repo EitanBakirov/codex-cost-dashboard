@@ -1,0 +1,53 @@
+<section class="view model-guide" id="guide" hidden aria-labelledby="guide-title">
+  <div class="guide-head">
+    <div>
+      <p class="eyebrow">Reference · bundled with this dashboard</p>
+      <h2 id="guide-title">Choose a model with context</h2>
+      <p>What each model is for, what its tokens cost, and what the effort control changes.</p>
+    </div>
+    <span class="guide-version">Bundled rate card <!-- RATE_CARD_VERSION --></span>
+  </div>
+
+  <div class="guide-cards">
+    <article class="card guide-intro">
+      <span class="guide-icon" aria-hidden="true">✦</span>
+      <div><h3>Astra</h3><p>For the hardest work across code, apps, and research when sustained reasoning and judgment matter most.</p></div>
+    </article>
+    <article class="card guide-intro">
+      <span class="guide-icon" aria-hidden="true">◈</span>
+      <div><h3>Sol</h3><p>For everyday and complex work. A sensible starting point for coding, analysis, and open-ended tasks.</p></div>
+    </article>
+    <article class="card guide-intro">
+      <span class="guide-icon" aria-hidden="true">◇</span>
+      <div><h3>Luna</h3><p>For clear, repeatable tasks where you can describe the expected result precisely.</p></div>
+    </article>
+  </div>
+
+  <article class="card guide-section">
+    <div class="guide-section-head"><div><p class="eyebrow">Standard speed · ChatGPT sign-in</p><h3>Token rates by model</h3></div><a href="https://learn.chatgpt.com/docs/pricing" target="_blank" rel="noreferrer">Official pricing ↗</a></div>
+    <p class="guide-help">Credits per 1 million tokens. Fresh input is newly processed text; cached input is reused context; output includes the model's generated and reasoning tokens. The actual credit total depends on how many of each token type a task uses.</p>
+    <div class="guide-table-wrap"><table class="guide-table"><thead><tr><th scope="col">Model</th><th scope="col">Fresh input</th><th scope="col">Cached input</th><th scope="col">Output</th><th scope="col">Where it fits</th></tr></thead><tbody><!-- MODEL_ROWS --></tbody></table></div>
+    <p class="guide-footnote">These are the bundled ChatGPT credit rates used by this dashboard. Included plan allowance does not convert directly from credits, and the dashboard's dollar equivalent is only an estimate. Fast mode uses 2.5× these credit rates for GPT‑6 Astra, Sol, and Luna where available.</p>
+  </article>
+
+  <div class="guide-bottom">
+    <article class="card guide-section">
+      <div class="guide-section-head"><div><p class="eyebrow">Reasoning effort</p><h3>What the effort bar changes</h3></div><a href="https://learn.chatgpt.com/docs/models#choosing-sol-terra-and-luna" target="_blank" rel="noreferrer">Official model guide ↗</a></div>
+      <p class="guide-help">Higher effort gives the selected model more room for planning, analysis, and checking. It often takes longer and may generate more output tokens, so a task may use more credits. The model's <em>rate per token</em> stays the same.</p>
+      <div class="guide-efforts">
+        <div><b>Light / Low</b><span>Quick, well-scoped work</span></div>
+        <div><b>Medium</b><span>Balanced depth and speed</span></div>
+        <div><b>High / Extra High</b><span>More difficult multi-step work</span></div>
+        <div><b>Max</b><span>More time for one hard task</span></div>
+        <div><b>Ultra</b><span>Uses subagents for separable work; usage can rise</span></div>
+      </div>
+      <p class="guide-footnote">OpenAI suggests starting with Astra Light, Sol Medium, or Luna High. Effort levels do not map exactly between model generations, and there is no fixed cost or time multiplier for each step.</p>
+    </article>
+    <article class="card guide-section guide-context">
+      <p class="eyebrow">Worth knowing</p><h3>Price versus plan usage</h3>
+      <p>The rates above estimate credit use from local token counts. Your 5-hour and weekly plan meters also depend on model, context, reasoning, tools, caching, and other activity. A lower token rate does not guarantee that every prompt uses less of your plan.</p>
+      <p>GPT‑5.6 Sol, Terra, and Luna remain available during the GPT‑6 rollout. OpenAI has not published a Terra retirement date. GPT‑5.5 retires from ChatGPT and Codex on October 14, 2026.</p>
+      <p><a href="https://learn.chatgpt.com/docs/models" target="_blank" rel="noreferrer">Models and availability ↗</a></p>
+    </article>
+  </div>
+</section>

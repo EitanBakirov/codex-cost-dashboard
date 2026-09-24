@@ -13,6 +13,7 @@ It reads the Codex session logs already stored on your computer, serves the dash
 - Estimated credit use, a configurable dollar equivalent, fresh input, cached input, and output tokens
 - Current locally observed plan allowance and reset time
 - Model usage mix
+- A separate Models & pricing guide with the bundled credit rate table, model roles, and reasoning-effort explanations
 - Task/session totals and prompt-by-prompt history
 - Model, effort, duration, calls, tools, token counts, and estimated cost per prompt
 - Compact skill, image, local-file, and clickable-link markers
@@ -104,6 +105,13 @@ The bundled rate card is versioned with each dashboard release. It currently
 uses the official ChatGPT **Standard-speed credit** rates, not API-key USD
 prices. This distinction matters: ChatGPT credits are what Codex with ChatGPT
 sign-in consumes, while API-key sessions use separate API pricing.
+
+The **Models & pricing** guide is available from the far-right navigation tab.
+Its table reads the same bundled rates as the calculator. It summarizes when
+each general model fits, how fresh/cached/output token rates differ, and why
+higher reasoning effort can change a task's duration and total usage without
+changing its per-token rate. The guide is bundled locally, so it does not make
+network requests when opened.
 
 The dashboard never automatically downloads or activates a new rate card. An
 optional update check compares only these public documents:

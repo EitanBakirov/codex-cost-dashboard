@@ -11,12 +11,14 @@ from codex_cost_dashboard.dashboard import (
     DashboardServer,
     HTML,
     local_account,
+    model_guide_rows,
     prompt_history_preview,
     prompt_input_tags,
     short_local_path,
 )
 from codex_cost_dashboard.monitor import PromptRun
 from codex_cost_dashboard.openai_updates import check_official_updates
+from codex_cost_dashboard.rate_card import MODEL_RATES
 
 
 def encode_segment(value):
@@ -100,6 +102,20 @@ class PreviewTests(unittest.TestCase):
         self.assertIn("tool-outcome", HTML)
         self.assertIn("Check official updates", HTML)
         self.assertIn("/api/updates", HTML)
+        self.assertIn('data-view="guide"', HTML)
+        self.assertIn('id="guide" hidden', HTML)
+        self.assertIn("What the effort bar changes", HTML)
+
+    def test_guide_rates_use_the_calculator_rate_card(self):
+        sol_fresh, sol_cached, sol_output = MODEL_RATES["gpt-6-sol"]
+        rows = model_guide_rows()
+        self.assertIn(
+            f'<td class="guide-number">{sol_fresh:g}</td>'
+            f'<td class="guide-number">{sol_cached:g}</td>'
+            f'<td class="guide-number">{sol_output:g}</td>',
+            rows,
+        )
+        self.assertIn("GPT‑5.6 Terra", rows)
 
 
 class AccountTests(unittest.TestCase):
