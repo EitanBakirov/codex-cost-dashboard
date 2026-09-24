@@ -57,9 +57,10 @@ def model_guide_rows() -> str:
     rows = []
     for model_id, label, fit, status in GUIDE_MODELS:
         fresh, cached, output = MODEL_RATES[model_id]
+        status_class = "guide-status retirement" if status.startswith("Retires") else "guide-status"
         rows.append(
             "<tr>"
-            f'<td class="guide-model">{html.escape(label)}<span class="guide-status">{html.escape(status)}</span></td>'
+            f'<td class="guide-model">{html.escape(label)}<span class="{status_class}">{html.escape(status)}</span></td>'
             f'<td class="guide-number">{fresh:g}</td>'
             f'<td class="guide-number">{cached:g}</td>'
             f'<td class="guide-number">{output:g}</td>'
@@ -69,11 +70,21 @@ def model_guide_rows() -> str:
     return "".join(rows)
 
 
+def sol_terra_comparison_rows() -> str:
+    sol = MODEL_RATES["gpt-6-sol"]
+    terra = MODEL_RATES["gpt-5.6-terra"]
+    return "".join(
+        f'<tr><th scope="row">{label}</th><td>{sol[index]:g}</td><td>{terra[index]:g}</td></tr>'
+        for index, label in enumerate(("Fresh input", "Cached input", "Output"))
+    )
+
+
 GUIDE_PATH = HTML_PATH.with_name("model_guide.html")
 GUIDE_HTML = (
     GUIDE_PATH.read_text(encoding="utf-8")
     .replace("<!-- RATE_CARD_VERSION -->", html.escape(RATE_CARD_VERSION))
     .replace("<!-- MODEL_ROWS -->", model_guide_rows())
+    .replace("<!-- SOL_TERRA_COMPARISON_ROWS -->", sol_terra_comparison_rows())
 )
 GUIDE_CSS = HTML_PATH.with_name("model_guide.css").read_text(encoding="utf-8")
 MODEL_ICON_CSS = HTML_PATH.with_name("model_icons.css").read_text(encoding="utf-8")

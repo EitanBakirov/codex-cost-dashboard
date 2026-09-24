@@ -21,12 +21,26 @@
 .guide-table .guide-model{font-weight:760;white-space:nowrap}
 .guide-table .guide-number{font-variant-numeric:tabular-nums;font-weight:740;white-space:nowrap}
 .guide-table .guide-fit{color:var(--muted);font-size:12px}
-.guide-table .guide-status{display:block;margin-top:3px;color:#e4c27f;font-size:10px;font-weight:700}
+.guide-table .guide-status{display:block;margin-top:3px;color:var(--muted);font-size:10px;font-weight:700}
+.guide-table .guide-status.retirement{color:var(--bad)}
 .guide-section .guide-footnote{margin-top:13px;font-size:12px}
+.guide-cost-comparison .guide-help{margin-bottom:17px}
+.guide-comparison-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+.guide-comparison-rates{overflow-x:auto;border:1px solid var(--edge);border-radius:10px}
+.guide-comparison-table{width:100%;border-collapse:collapse;text-align:left;font-variant-numeric:tabular-nums}
+.guide-comparison-table caption{padding:10px 13px;color:var(--muted);font-size:11px;text-align:left}
+.guide-comparison-table th,.guide-comparison-table td{padding:10px 13px;border-top:1px solid var(--edge);white-space:nowrap}
+.guide-comparison-table thead th{background:#1a1a1a;color:var(--muted);font-size:11px;font-weight:700}
+.guide-comparison-table tbody th{color:var(--muted);font-weight:650}
+.guide-comparison-table tbody td{font-weight:740}
+.guide-comparison-explain{display:grid;gap:10px}
+.guide-comparison-explain p{margin:0;padding:0 0 10px;border-bottom:1px solid var(--edge)}
+.guide-comparison-explain p:last-child{padding-bottom:0;border-bottom:0}
+.guide-comparison-explain strong{color:var(--text)}
 .guide-bottom{display:grid;grid-template-columns:1.45fr .8fr;gap:14px}
 .guide-efforts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;margin-top:13px;border-top:1px solid var(--edge)}
 .guide-efforts>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--edge)}
 .guide-efforts b{white-space:nowrap}.guide-efforts span{color:var(--muted);text-align:right}
 .guide-context p:not(.eyebrow){margin-top:13px}
-@media(max-width:850px){.guide-cards,.guide-bottom{grid-template-columns:1fr}.guide-intro{min-height:0}.guide-efforts{grid-template-columns:1fr}}
+@media(max-width:850px){.guide-cards,.guide-bottom,.guide-comparison-grid{grid-template-columns:1fr}.guide-intro{min-height:0}.guide-efforts{grid-template-columns:1fr}}
 @media(max-width:520px){.tabs{gap:5px}.tabs .tab{padding:8px 7px;font-size:12px}.guide-head{align-items:start;flex-direction:column}.guide-section{padding:18px}.guide-section-head{align-items:start;flex-direction:column}.guide-cards{gap:10px}.guide-efforts>div{flex-direction:column;gap:2px}.guide-efforts span{text-align:left}}
