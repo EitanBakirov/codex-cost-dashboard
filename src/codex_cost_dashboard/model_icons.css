@@ -19,7 +19,7 @@
   width: 15px;
   height: 15px;
   margin-right: 5px;
-  vertical-align: -2px;
+  vertical-align: -4px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -27,5 +27,5 @@
   stroke-linejoin: round;
   flex: none;
 }
-.guide-intro h3 .model-icon { width: 21px; height: 21px; margin-right: 8px; vertical-align: -4px; }
+.guide-intro h3 .model-icon { width: 21px; height: 21px; margin-right: 8px; vertical-align: -6px; }
 .guide-model .model-icon { margin-right: 7px; }
