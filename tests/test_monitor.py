@@ -83,6 +83,27 @@ class MonitorParserTests(unittest.TestCase):
         self.assertEqual(prompt.meter.usage.output_tokens, 20)
         self.assertEqual(self.state.plan_used_percent, 12)
 
+    def test_record_and_legacy_mirror_count_once_with_repeated_snapshot(self):
+        consume_event(self.state, event("2026-01-02T08:00:00Z", "event_msg", {"type": "user_message", "message": "Check"}))
+        usage = {"input_tokens": 100, "cached_input_tokens": 80, "output_tokens": 20}
+        consume_event(self.state, event("2026-01-02T08:00:01Z", "token_usage_record", {"response_id": "r1", "usage": usage}))
+        count = {"type": "token_count", "info": {"last_token_usage": usage, "total_token_usage": usage}}
+        consume_event(self.state, event("2026-01-02T08:00:02Z", "event_msg", count))
+        consume_event(self.state, event("2026-01-02T08:00:03Z", "event_msg", count))
+        consume_event(self.state, event("2026-01-02T08:00:04Z", "token_usage_record", {"response_id": "r1", "usage": usage}))
+        self.assertEqual(self.state.task.model_calls, 1)
+        self.assertEqual(self.state.prompts[0].meter.usage.input_tokens, 100)
+
+    def test_automatic_usage_is_separate_and_fragment_reset_is_valid(self):
+        usage = {"input_tokens": 100, "cached_input_tokens": 80, "output_tokens": 20}
+        for minute in (0, 1):
+            consume_event(self.state, event(f"2026-01-02T08:0{minute}:00Z", "session_meta", {"id": "same-task"}))
+            consume_event(self.state, event(f"2026-01-02T08:0{minute}:01Z", "event_msg", {
+                "type": "token_count", "info": {"last_token_usage": usage, "total_token_usage": usage},
+            }))
+        self.assertEqual(self.state.task.model_calls, 2)
+        self.assertEqual(self.state.background.model_calls, 2)
+
     def test_mirrored_legacy_message_is_not_a_second_prompt(self):
         timestamp = "2026-01-02T08:00:00Z"
         consume_event(

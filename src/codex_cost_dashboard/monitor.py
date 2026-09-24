@@ -72,6 +72,12 @@ class MeteredUsage:
     tool_calls: int = 0
     unknown_pricing_calls: int = 0
 
+    def add(self, other: "MeteredUsage") -> None:
+        self.usage.add(other.usage)
+        for name in ("credits", "fresh_input_credits", "cached_input_credits", "output_credits",
+                     "model_calls", "tool_calls", "unknown_pricing_calls"):
+            setattr(self, name, getattr(self, name) + getattr(other, name))
+
     def add_model_call(self, call: Usage, model: str | None) -> None:
         self.usage.add(call)
         self.model_calls += 1
@@ -119,6 +125,12 @@ class SessionState:
     plan_reset_at: int | None = None
     plan_observed_at: str | None = None
     task: MeteredUsage = field(default_factory=MeteredUsage)
+    background: MeteredUsage = field(default_factory=MeteredUsage)
+    background_calls: list[tuple[str | None, Usage, str | None]] = field(default_factory=list)
+    model_call_events: list[tuple[str | None, Usage, str | None]] = field(default_factory=list)
+    seen_response_ids: set[str] = field(default_factory=set)
+    pending_record_usage: Usage | None = None
+    last_legacy_total: Usage | None = None
     prompts: list[PromptRun] = field(default_factory=list)
     pending_tool_calls: dict[str, dict[str, Any]] = field(default_factory=dict)
     malformed_lines: int = 0
@@ -149,6 +161,18 @@ def usage_from_dict(value: dict[str, Any] | None) -> Usage:
         cached_input_tokens=int(value.get("cached_input_tokens") or 0),
         output_tokens=int(value.get("output_tokens") or 0),
     )
+
+
+def record_model_usage(state: SessionState, usage: Usage, timestamp: str | None) -> None:
+    state.task.add_model_call(usage, state.current_model)
+    state.model_call_events.append((timestamp, usage, state.current_model))
+    prompt = state.current_prompt
+    if prompt and not prompt.completed:
+        prompt.meter.add_model_call(usage, state.current_model)
+        prompt.model = state.current_model or prompt.model
+    else:
+        state.background.add_model_call(usage, state.current_model)
+        state.background_calls.append((timestamp, usage, state.current_model))
 
 
 def is_tool_call(payload: dict[str, Any]) -> bool:
@@ -334,7 +358,22 @@ def consume_event(state: SessionState, event: dict[str, Any]) -> None:
     event_type = event.get("type")
     payload = event_payload(event)
 
+    if event_type == "token_usage_record":
+        response_id = payload.get("response_id")
+        usage = usage_from_dict(payload.get("usage"))
+        if response_id and response_id not in state.seen_response_ids:
+            state.seen_response_ids.add(response_id)
+            record_model_usage(state, usage, event.get("timestamp"))
+            state.current_context_tokens = usage.input_tokens
+        # The following legacy token_count is a second report of this response.
+        state.pending_record_usage = usage
+        return
+
     if event_type == "session_meta":
+        # Cumulative counters belong to a physical JSONL fragment, not a
+        # logical task continued in another file.
+        state.last_legacy_total = None
+        state.pending_record_usage = None
         state.session_id = payload.get("session_id") or payload.get("id")
         state.project = payload.get("cwd")
         state.originator = payload.get("originator")
@@ -478,15 +517,19 @@ def consume_event(state: SessionState, event: dict[str, Any]) -> None:
 
     info = payload.get("info") or {}
     last_usage = usage_from_dict(info.get("last_token_usage"))
+    total = usage_from_dict(info.get("total_token_usage")) if info.get("total_token_usage") else None
     if last_usage.input_tokens or last_usage.output_tokens:
-        state.task.add_model_call(last_usage, state.current_model)
-        prompt = state.current_prompt
-        if prompt and not prompt.completed:
-            prompt.meter.add_model_call(last_usage, state.current_model)
-            prompt.model = state.current_model or prompt.model
+        mirrored_record = state.pending_record_usage == last_usage
+        repeated_snapshot = total is not None and total == state.last_legacy_total
+        if not mirrored_record and not repeated_snapshot:
+            record_model_usage(state, last_usage, event.get("timestamp"))
 
         state.current_context_tokens = last_usage.input_tokens
         state.context_window = int(info.get("model_context_window") or state.context_window)
+
+    state.pending_record_usage = None
+    if total is not None:
+        state.last_legacy_total = total
 
     limits = payload.get("rate_limits") or {}
     primary = limits.get("primary") or {}

@@ -158,6 +158,8 @@ It does not modify Codex sessions or authentication. By default it makes no exte
 ## Accuracy and limitations
 
 - Estimates use token counters written to local Codex session logs and the rate table bundled with this release. The current rate-card version and source are exposed in the local API.
+- Newer response records are counted once by response ID; older logs fall back to legacy token snapshots. Repeated snapshots do not add another model call.
+- Automatic work without a user prompt is included in task and Global totals and shown separately. Guardian/automated-review logs are reported separately by token and call count, but excluded from the dollar estimate because their billing treatment is unknown.
 - Included allowance, Fast mode, discounts, taxes, invoice adjustments, and server-side accounting are not available locally.
 - The plan percentage is the latest rate-limit snapshot observed in local logs for the active account. Historical session logs may belong to a different account.
 - Old sessions generally cannot be assigned reliably to an account because their logs may not contain account identity.

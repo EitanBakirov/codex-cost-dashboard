@@ -29,6 +29,7 @@ from .monitor import (
     is_primary_session,
     logical_session_id,
     read_events,
+    session_metadata,
 )
 from .openai_updates import check_official_updates, load_update_state
 from .rate_card import MODEL_RATES, RATE_CARD_DESCRIPTION, RATE_CARD_SOURCE, RATE_CARD_VERSION
@@ -254,6 +255,43 @@ footer{display:block}footer>.footer-copy{display:block}.update-cluster{display:i
 </script>
 """
 HTML = HTML.replace("</body>", INSPECTOR_ENHANCEMENTS + "</body>")
+HTML = HTML.replace("</body>", """<script>
+(() => {
+  const note = (anchorId, id) => {
+    const target = document.getElementById(anchorId);
+    if (!target) return null;
+    const element = document.createElement('div');
+    element.id = id;
+    element.className = 'detail';
+    target.insertAdjacentElement('afterend', element);
+    return element;
+  };
+  const globalNote = note('globalCredits', 'globalAccountingNote');
+  const taskNote = note('taskCredits', 'taskAccountingNote');
+  const originalGlobal = renderGlobal;
+  renderGlobal = function(data) {
+    originalGlobal(data);
+    if (globalNote) {
+      const background = data.background || {};
+      const reviews = data.automated_reviews || {};
+      globalNote.textContent = 'Includes ' + (background.model_calls || 0) +
+        ' automatic model calls (' + money(background.usd_equivalent) + ').' +
+        (reviews.model_calls ? ' Separately logged reviews: ' + reviews.model_calls +
+          ' calls, excluded from estimate (billing unknown).' : '') +
+        (data.unknown_pricing_calls ? ' ' + data.unknown_pricing_calls + ' calls have no known price.' : '');
+    }
+  };
+  const originalTask = renderTask;
+  renderTask = function(data) {
+    originalTask(data);
+    if (taskNote) {
+      const background = data.background || {};
+      taskNote.textContent = 'Automatic work outside prompts: ' +
+        (background.model_calls || 0) + ' model calls · ' + money(background.usd_equivalent) + '.';
+    }
+  };
+})();
+</script></body>""", 1)
 
 
 def usage_dict(meter: MeteredUsage, usd_per_credit: float) -> dict[str, Any]:
@@ -268,6 +306,7 @@ def usage_dict(meter: MeteredUsage, usd_per_credit: float) -> dict[str, Any]:
         },
         "model_calls": meter.model_calls,
         "tool_calls": meter.tool_calls,
+        "unknown_pricing_calls": meter.unknown_pricing_calls,
         "usage": {
             "input_tokens": usage.input_tokens,
             "cached_input_tokens": usage.cached_input_tokens,
@@ -508,6 +547,7 @@ def state_dict(state: SessionState, usd_per_credit: float, selection: dict[str, 
         "current_prompt": prompt_dict(state.current_prompt, usd_per_credit),
         "prompts": [prompt_dict(prompt, usd_per_credit) for prompt in state.prompts],
         "task": usage_dict(state.task, usd_per_credit),
+        "background": usage_dict(state.background, usd_per_credit),
         "context": {"tokens": state.current_context_tokens, "window": state.context_window, "percent": context_percent},
         "plan": format_plan_snapshot(state.plan_used_percent, state.plan_reset_at, state.plan_observed_at),
         "selection": selection,
@@ -545,6 +585,8 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
         label = "All local history"
 
     meter = MeteredUsage()
+    background = MeteredUsage()
+    automated_reviews = MeteredUsage()
     prompt_count = 0
     model_counts: dict[str, int] = {}
     paths: list[Path] = []
@@ -562,6 +604,16 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
     for path in paths:
         try:
             if not is_primary_session(path):
+                metadata = session_metadata(path)
+                if metadata.get("thread_source") == "guardian_review":
+                    review = SessionState(path=path)
+                    with path.open("r", encoding="utf-8") as log:
+                        read_events(log, review)
+                    for timestamp, usage, model in review.model_call_events:
+                        if window_start is None or (
+                            timestamp and datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone() >= window_start
+                        ):
+                            automated_reviews.add_model_call(usage, model)
                 continue
             task_id = logical_session_id(path)
             state = SessionState(path=path)
@@ -578,17 +630,22 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
             started_at = prompt_started_at(prompt)
             if window_start is None or (started_at is not None and started_at >= window_start):
                 included_prompts.append(prompt)
-        if not included_prompts:
+        included_background = [
+            (timestamp, usage, model) for timestamp, usage, model in state.background_calls
+            if window_start is None or (
+                timestamp and datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone() >= window_start
+            )
+        ]
+        if not included_prompts and not included_background:
             continue
         # A continuing task may have several physical log fragments in the
         # selected range; show it once while retaining every prompt's usage.
         included_task_ids.add(task_id)
+        for _timestamp, usage, model in included_background:
+            meter.add_model_call(usage, model)
+            background.add_model_call(usage, model)
         for prompt in included_prompts:
-            meter.usage.add(prompt.meter.usage)
-            meter.credits += prompt.meter.credits
-            meter.model_calls += prompt.meter.model_calls
-            meter.tool_calls += prompt.meter.tool_calls
-            meter.unknown_pricing_calls += prompt.meter.unknown_pricing_calls
+            meter.add(prompt.meter)
             prompt_count += 1
             # Local transcript fragments occasionally omit the turn's model.
             # Keep the prompt visible without implying that "unknown" is a
@@ -599,6 +656,8 @@ def aggregate_sessions(sessions_dir: Path, usd_per_credit: float, range_name: st
         **usage_dict(meter, usd_per_credit),
         "prompt_count": prompt_count,
         "task_count": len(included_task_ids),
+        "background": usage_dict(background, usd_per_credit),
+        "automated_reviews": usage_dict(automated_reviews, usd_per_credit),
         "model_mix": [
             {"model": model, "prompt_count": count, "percent": round(count * 100 / prompt_count)}
             for model, count in sorted(model_counts.items(), key=lambda item: (-item[1], item[0]))

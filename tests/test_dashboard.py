@@ -10,6 +10,7 @@ from unittest.mock import patch
 from codex_cost_dashboard.dashboard import (
     DashboardServer,
     HTML,
+    aggregate_sessions,
     local_account,
     model_guide_rows,
     prompt_history_preview,
@@ -69,6 +70,36 @@ def fixture_log(path):
 
 
 class PreviewTests(unittest.TestCase):
+    def test_global_includes_automatic_usage_outside_a_prompt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "auto.jsonl"
+            records = [
+                {"timestamp": "2026-01-02T08:00:00Z", "type": "session_meta", "payload": {"id": "auto", "thread_source": "user"}},
+                {"timestamp": "2026-01-02T08:00:01Z", "type": "turn_context", "payload": {"model": "gpt-5.6-terra"}},
+                {"timestamp": "2026-01-02T08:00:02Z", "type": "token_usage_record", "payload": {
+                    "response_id": "r1", "usage": {"input_tokens": 100, "cached_input_tokens": 80, "output_tokens": 20},
+                }},
+            ]
+            path.write_text("\n".join(map(json.dumps, records)), encoding="utf-8")
+            review = Path(directory) / "review.jsonl"
+            review_records = [
+                {"timestamp": "2026-01-02T08:00:00Z", "type": "session_meta", "payload": {
+                    "id": "review", "thread_source": "guardian_review", "parent_thread_id": "auto",
+                    "source": {"subagent": {"other": "guardian"}},
+                }},
+                {"timestamp": "2026-01-02T08:00:01Z", "type": "turn_context", "payload": {"model": "codex-auto-review"}},
+                {"timestamp": "2026-01-02T08:00:02Z", "type": "token_usage_record", "payload": {
+                    "response_id": "review-r1", "usage": {"input_tokens": 200, "output_tokens": 10},
+                }},
+            ]
+            review.write_text("\n".join(map(json.dumps, review_records)), encoding="utf-8")
+            result = aggregate_sessions(Path(directory), 0.04, "all")
+            self.assertEqual(result["prompt_count"], 0)
+            self.assertEqual(result["model_calls"], 1)
+            self.assertEqual(result["background"]["model_calls"], 1)
+            self.assertEqual(result["automated_reviews"]["model_calls"], 1)
+            self.assertEqual(result["automated_reviews"]["credits"], 0)
+
     def test_link_appears_once_as_short_clickable_tag(self):
         url = "https://example.test/very/long/path"
         text = f"[{url}]({url}) please review the result"
