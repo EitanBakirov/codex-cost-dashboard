@@ -28,30 +28,31 @@
   </article>
 
   <article class="card guide-section guide-cost-comparison" aria-labelledby="guide-cost-comparison-title">
-    <div class="guide-section-head"><div><p class="eyebrow">Observed in local tasks</p><h3 id="guide-cost-comparison-title">Sol vs Terra: what a whole turn used</h3></div></div>
-    <p class="guide-help">The rate table above prices tokens. This informal sample shows what happened across complete turns, including repeated model calls and tool use.</p>
+    <div class="guide-section-head"><div><p class="eyebrow">Observed in local tasks</p><h3 id="guide-cost-comparison-title">GPT‑5.6 Sol vs GPT‑6 Sol: what turns used</h3></div></div>
+    <p class="guide-help">The rate table above prices tokens. This larger local sample shows complete, metered turns—not a controlled model benchmark.</p>
     <div class="guide-comparison-grid">
       <div class="guide-comparison-rates">
         <table class="guide-comparison-table">
-          <caption>Three tasks · September 22–24, 2026</caption>
-          <thead><tr><th scope="col">Per turn</th><th scope="col"><span class="model-terra">GPT‑5.6 Terra</span></th><th scope="col"><span class="model-sol">GPT‑6 Sol</span></th></tr></thead>
+          <caption>Local history · through September 29, 2026</caption>
+          <thead><tr><th scope="col">Per metered turn</th><th scope="col"><span class="model-sol">GPT‑5.6 Sol</span></th><th scope="col"><span class="model-sol">GPT‑6 Sol</span></th></tr></thead>
           <tbody>
-            <tr><th scope="row">Completed turns</th><td>36</td><td>41</td></tr>
-            <tr><th scope="row">Median elapsed time</th><td>29 sec</td><td>56 sec</td></tr>
-            <tr><th scope="row">Median model calls</th><td>2</td><td>5</td></tr>
-            <tr><th scope="row">Median tool calls</th><td>1</td><td>4</td></tr>
-            <tr><th scope="row">Median estimated credits</th><td>~2.6</td><td>~8.5</td></tr>
-            <tr><th scope="row">Median $ equivalent</th><td>~$0.10</td><td>~$0.34</td></tr>
+            <tr><th scope="row">Metered turns / tasks</th><td>3,091 / 26</td><td>248 / 13</td></tr>
+            <tr><th scope="row">Median model calls</th><td>2</td><td>3</td></tr>
+            <tr><th scope="row">Median tool calls</th><td>1</td><td>2</td></tr>
+            <tr><th scope="row">Median input tokens</th><td>313K</td><td>291K</td></tr>
+            <tr><th scope="row">Median output tokens</th><td>1.3K</td><td>818</td></tr>
+            <tr><th scope="row">Median estimated credits</th><td>6.95</td><td>3.82</td></tr>
+            <tr><th scope="row">75th-percentile credits</th><td>25.45</td><td>13.35</td></tr>
           </tbody>
         </table>
       </div>
       <div class="guide-comparison-explain">
-        <p><strong>What happened:</strong> Sol made more model and tool calls before reporting back. Its typical turn took longer and used more estimated credits, despite its lower output-token rate.</p>
-        <p><strong>Why:</strong> More iterations can bring earlier context and tool results into later model calls. Long-running commands can also extend elapsed time without measuring model speed.</p>
-        <p><strong>The choice:</strong> Extra investigation may be worth the time and usage on open-ended work. For bounded work, a shorter, more predictable turn may suit you better.</p>
+        <p><strong>Overall:</strong> GPT‑6 Sol had slightly more calls in the median turn, yet a lower median credit estimate. Its lower per-token rates mattered more in this mix of work.</p>
+        <p><strong>Same-effort check:</strong> At Medium, the medians were 6.38 credits across 860 GPT‑5.6 Sol turns and 12.10 across 42 GPT‑6 Sol turns. But 81% of the GPT‑6 Medium turns came from one task, so this does not isolate a model effect.</p>
+        <p><strong>What to take away:</strong> More reasoning and tool iterations can erase a cheaper token rate on a particular task. These logs do not show that either model is intrinsically faster, cheaper per task, or better quality.</p>
       </div>
     </div>
-    <p class="guide-footnote">Sample: 12 completed Terra turns immediately before the switch in each task, then all 41 completed Sol turns after it. Credit medians are approximate, reconciled against uniquely identified response records; automatic work and separately logged review agents are excluded from per-turn medians. Tasks and effort settings differed, so this is an observation, not a controlled model benchmark or a quality score. Elapsed time includes tool waits. Dollar equivalents use $0.04 per credit and are not billed charges or plan percentages.</p>
+    <p class="guide-footnote">Sample uses all locally saved primary-task turns with recorded usage: GPT‑5.6 Sol mostly July–August (71% High effort) and GPT‑6 Sol in September (79% Low/Light effort). Only two tasks used both models, with too few balanced turns for a paired comparison. Older GPT‑5.6 logs contain synthetic or collapsed timestamps, so elapsed time is intentionally omitted. Per-turn figures exclude automatic work outside prompts and separately logged review agents. Credits are estimates, not billed charges or plan percentages.</p>
   </article>
 
   <div class="guide-bottom">

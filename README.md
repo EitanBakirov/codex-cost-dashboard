@@ -110,9 +110,9 @@ The **Models & pricing** guide is available from the far-right navigation tab.
 Its table reads the same bundled rates as the calculator. It summarizes when
 each general model fits, how fresh/cached/output token rates differ, and why
 higher reasoning effort can change a task's duration and total usage without
-changing its per-token rate. An anonymized, fixed sample of 36 Terra and 41
-Sol turns across three tasks illustrates how extra model and tool steps can
-outweigh a lower output-token rate. The sample is illustrative, not a live
+changing its per-token rate. An anonymized, fixed sample of 3,091 GPT-5.6 Sol
+and 248 GPT-6 Sol metered turns shows both the observed totals and the strong
+effort/task-mix caveats. The sample is illustrative, not a live
 analysis of each installer's logs or a model-quality benchmark. The guide is
 bundled locally, so it does not make network requests when opened.
 
