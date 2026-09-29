@@ -110,23 +110,18 @@ The **Models & pricing** guide is available from the far-right navigation tab.
 Its table reads the same bundled rates as the calculator. It summarizes when
 each general model fits, how fresh/cached/output token rates differ, and why
 higher reasoning effort can change a task's duration and total usage without
-changing its per-token rate. An anonymized, fixed sample of 3,091 GPT-5.6 Sol
-and 276 GPT-6 Sol metered turns shows both the observed totals and the strong
-effort/task-mix caveats. The sample is illustrative, not a live
+changing its per-token rate. An anonymized, fixed snapshot of all locally
+available metered prompts—3,091 GPT-5.6 Sol and 276 GPT-6 Sol—compares one
+submitted prompt through its completed response. The sample is illustrative, not a live
 analysis of each installer's logs or a model-quality benchmark. The guide is
 bundled locally, so it does not make network requests when opened.
 It compares identical model-call bands for both Sol versions to show how
 repeated calls accumulate cached context, then offers guidance for scoping
-bounded work. These
-fixed, anonymized sample figures are separate from the installer's live totals.
-The analysis includes all locally available metered tasks in the snapshot for
-each model; it does not create artificially equal-size samples. Task-level
-totals show how different the historical task mix is.
-The guide also shows a fixed, anonymized seven-day task-level slice. It makes
-the concentration in one long GPT-6 Sol task visible without treating it as a
-typical model result. Summed prompt spans include tool waits and are not
-billable model-compute time. Older GPT-5.6 timing records with unreliable
-timestamps are excluded from the timing comparison.
+bounded work. The guide's elapsed-time comparison uses only September prompts
+with credible start and completion timestamps: 49 GPT-5.6 Sol and 276 GPT-6
+Sol. Response spans include tool waits and are not billable model-compute time.
+Older GPT-5.6 timestamps are compressed and excluded from that timing
+comparison. These fixed sample figures are separate from each installer's live totals.
 
 Celestial model families use small SVG icons before their names throughout the
 dashboard: stars for Astra, sun for Sol, globe for Terra, and crescent for Luna.
