@@ -42,6 +42,27 @@ def duration(started: str | None, completed: str | None) -> float | None:
         return None
 
 
+def signed_duration(started: str | None, completed: str | None) -> float | None:
+    try:
+        first = datetime.fromisoformat(str(started).replace("Z", "+00:00"))
+        last = datetime.fromisoformat(str(completed).replace("Z", "+00:00"))
+        return (last - first).total_seconds()
+    except (TypeError, ValueError):
+        return None
+
+
+def tool_timestamp_span(tools: list[dict]) -> float | None:
+    values = []
+    for tool in tools:
+        for key in ("started_at", "completed_at"):
+            if tool.get(key):
+                try:
+                    values.append(datetime.fromisoformat(str(tool[key]).replace("Z", "+00:00")))
+                except ValueError:
+                    pass
+    return (max(values) - min(values)).total_seconds() if values else None
+
+
 def describe(label: str, rows: list[dict]) -> None:
     tasks = {row["task"] for row in rows}
     with_usage = [row for row in rows if row["calls"]]
@@ -94,6 +115,8 @@ def main() -> None:
                 "cached_credits": prompt.meter.cached_input_credits,
                 "output_credits": prompt.meter.output_credits,
                 "duration": duration(prompt.started_at, prompt.completed_at),
+                "raw_duration": signed_duration(prompt.started_at, prompt.completed_at),
+                "tool_timestamp_span": tool_timestamp_span(prompt.tools),
                 "started": prompt.started_at,
                 "month": str(prompt.started_at or "")[:7],
             })
@@ -121,6 +144,22 @@ def main() -> None:
             dominant = max(tasks.values(), key=lambda task_rows: sum(row["credits"] for row in task_rows))
             dominant_credits = sum(row["credits"] for row in dominant)
             print(f"    highest-credit task: {len(dominant)} prompts, {sum(row['calls'] for row in dominant)} model calls, {sum(row['tools'] for row in dominant)} tool calls, {dominant_credits:,.1f} credits ({dominant_credits / sum(row['credits'] for row in recent):.1%} of model credits)")
+    print("All-history task rollup (metered, completed prompts only; timing excluded):")
+    for model in MODELS:
+        selected = [row for row in rows if row["model"] == model and row["calls"]]
+        tasks: dict[str, list[dict]] = defaultdict(list)
+        for row in selected:
+            tasks[row["task"]].append(row)
+        print(f"  {model}: {len(selected)} prompts, {len(tasks)} tasks")
+        if tasks:
+            for name in ("credits", "calls", "tools", "input", "cached"):
+                totals = [sum(row[name] for row in task_rows) for task_rows in tasks.values()]
+                print(f"    {name}/task: median {quantile(totals, .5):,.1f}, p75 {quantile(totals, .75):,.1f}, p90 {quantile(totals, .9):,.1f}, max {max(totals):,.1f}")
+            turns_per_task = [len(task_rows) for task_rows in tasks.values()]
+            print(f"    prompts/task: median {quantile(turns_per_task, .5):,.1f}, p75 {quantile(turns_per_task, .75):,.1f}, p90 {quantile(turns_per_task, .9):,.1f}, max {max(turns_per_task)}")
+            call_totals = [sum(row["calls"] for row in task_rows) for task_rows in tasks.values()]
+            credit_totals = [sum(row["credits"] for row in task_rows) for task_rows in tasks.values()]
+            print(f"    tasks with 100+ calls: {sum(value >= 100 for value in call_totals)}/{len(tasks)}; 500+ credits: {sum(value >= 500 for value in credit_totals)}/{len(tasks)}")
     for model in MODELS:
         selected = [row for row in rows if row["model"] == model]
         print(f"{model} months: {dict(sorted(Counter(row['month'] for row in selected).items()))}")
@@ -128,7 +167,17 @@ def main() -> None:
         for month in sorted({row["month"] for row in selected}):
             timed = [row for row in selected if row["month"] == month and row["calls"] and row["duration"] is not None]
             if timed:
-                print(f"  {month} timing: {len(timed)} turns, {sum(row['duration'] == 0 for row in timed)} zero-duration, median {quantile([row['duration'] for row in timed], .5):.1f}s")
+                negative = [row["raw_duration"] for row in timed if row["raw_duration"] is not None and row["raw_duration"] < 0]
+                zero = [row for row in timed if row["raw_duration"] == 0]
+                print(f"  {month} timing: {len(timed)} turns, {len(zero)} identical start/end stamps, {len(negative)} end-before-start stamps, median {quantile([row['duration'] for row in timed], .5):.1f}s")
+                if negative:
+                    print(f"    negative raw duration: median {quantile(negative, .5):.1f}s, min {min(negative):.1f}s")
+                print(f"    below 1s: {sum(row['duration'] < 1 for row in timed)}, below 5s: {sum(row['duration'] < 5 for row in timed)}, median exact {quantile([row['duration'] for row in timed], .5):.6f}s")
+                implausible = [row for row in timed if row["duration"] < 1 and row["calls"] >= 10]
+                print(f"    10+ model calls in under 1s: {len(implausible)}")
+                with_tools = [row for row in implausible if row["tool_timestamp_span"] is not None]
+                if with_tools:
+                    print(f"    of these, tool timestamps span under 1s: {sum(row['tool_timestamp_span'] < 1 for row in with_tools)}/{len(with_tools)}")
         september = [row for row in selected if row["month"] == "2026-09" and row["calls"] and row["duration"] is not None]
         if september:
             describe(f" {model} September timed", september)
