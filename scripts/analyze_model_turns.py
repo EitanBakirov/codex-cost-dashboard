@@ -112,23 +112,24 @@ def main() -> None:
     for model in MODELS:
         describe(f"  {model} within paired tasks", [row for row in rows if row["task"] in paired and row["model"] == model])
 
-    sol = [row for row in rows if row["model"] == "gpt-6-sol" and row["calls"]]
-    print("GPT-6 Sol usage drivers:")
-    for label, selected in (
-        ("1-2 calls", [row for row in sol if row["calls"] <= 2]),
-        ("3-9 calls", [row for row in sol if 3 <= row["calls"] <= 9]),
-        ("10+ calls", [row for row in sol if row["calls"] >= 10]),
-    ):
-        describe(label, selected)
-    if sol:
-        total_credits = sum(row["credits"] for row in sol)
-        heavy = [row for row in sol if row["calls"] >= 10]
-        print(f"  10+ call share of turns: {len(heavy) / len(sol):.1%}")
-        print(f"  10+ call share of credits: {sum(row['credits'] for row in heavy) / total_credits:.1%}")
-        for name in ("fresh", "cached", "output"):
-            tokens = sum(row["input"] - row["cached"] if name == "fresh" else row[name] for row in sol)
-            credits = sum(row[name + "_credits"] for row in sol)
-            print(f"  {name}: {tokens:,} tokens, {credits:,.2f} credits")
+    for model in MODELS:
+        selected_model = [row for row in rows if row["model"] == model and row["calls"]]
+        print(f"{model} model-call bands:")
+        for label, selected in (
+            ("1-2 calls", [row for row in selected_model if row["calls"] <= 2]),
+            ("3-9 calls", [row for row in selected_model if 3 <= row["calls"] <= 9]),
+            ("10+ calls", [row for row in selected_model if row["calls"] >= 10]),
+        ):
+            describe(label, selected)
+        if selected_model:
+            total_credits = sum(row["credits"] for row in selected_model)
+            heavy = [row for row in selected_model if row["calls"] >= 10]
+            print(f"  10+ call share of turns: {len(heavy) / len(selected_model):.1%}")
+            print(f"  10+ call share of credits: {sum(row['credits'] for row in heavy) / total_credits:.1%}")
+            for name in ("fresh", "cached", "output"):
+                tokens = sum(row["input"] - row["cached"] if name == "fresh" else row[name] for row in selected_model)
+                credits = sum(row[name + "_credits"] for row in selected_model)
+                print(f"  {name}: {tokens:,} tokens, {credits:,.2f} credits")
 
 
 if __name__ == "__main__":
