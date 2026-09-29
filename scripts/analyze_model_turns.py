@@ -100,6 +100,19 @@ def main() -> None:
         selected = [row for row in rows if row["model"] == model]
         print(f"{model} months: {dict(sorted(Counter(row['month'] for row in selected).items()))}")
         describe(model, selected)
+        for month in sorted({row["month"] for row in selected}):
+            timed = [row for row in selected if row["month"] == month and row["calls"] and row["duration"] is not None]
+            if timed:
+                print(f"  {month} timing: {len(timed)} turns, {sum(row['duration'] == 0 for row in timed)} zero-duration, median {quantile([row['duration'] for row in timed], .5):.1f}s")
+        september = [row for row in selected if row["month"] == "2026-09" and row["calls"] and row["duration"] is not None]
+        if september:
+            describe(f" {model} September timed", september)
+            active_by_task: dict[str, float] = defaultdict(float)
+            turns_by_task: Counter[str] = Counter()
+            for row in september:
+                active_by_task[row["task"]] += row["duration"]
+                turns_by_task[row["task"]] += 1
+            print(f"  September active time per task: median {quantile(list(active_by_task.values()), .5):.1f}s, p75 {quantile(list(active_by_task.values()), .75):.1f}s; median turns/task {quantile(list(turns_by_task.values()), .5):.1f}")
         for effort in ("low", "medium", "high"):
             describe(f"  {effort}", [row for row in selected if row["effort"] == effort])
     by_task_model = defaultdict(list)
