@@ -138,6 +138,12 @@ class PreviewTests(unittest.TestCase):
         self.assertIn("What the effort bar changes", HTML)
         self.assertIn("Repeated context reads in long GPT‑6 Sol turns", HTML)
         self.assertIn("258 metered GPT‑6 Sol turns", HTML)
+        self.assertLess(HTML.index("Token rates by model"), HTML.index("What the effort bar changes"))
+        self.assertLess(HTML.index("What the effort bar changes"), HTML.index("What the local sample suggests"))
+        self.assertLess(HTML.index("What the local sample suggests"), HTML.index("GPT‑5.6 Sol vs GPT‑6 Sol: what turns used"))
+        self.assertLess(HTML.index("Repeated context reads in long GPT‑6 Sol turns"), HTML.index("What should you use?"))
+        self.assertEqual(HTML.count('class="card guide-section guide-cost-comparison"'), 1)
+        self.assertEqual(HTML.count('class="card guide-section guide-usage-drivers"'), 0)
         for family in ("astra", "sol", "terra", "luna"):
             self.assertIn(f"--model-{family}:", HTML)
             self.assertIn(f"    {family}: '", HTML)
