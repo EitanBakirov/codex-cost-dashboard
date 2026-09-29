@@ -10,13 +10,13 @@
 
   <div class="guide-cards">
     <article class="card guide-intro">
-      <div><h3>Astra</h3><p>For the hardest work across code, apps, and research when sustained reasoning and judgment matter most.</p></div>
+      <div><h3>Astra</h3><p>For the hardest end-to-end work where judgment matters most. Its higher token rate makes a clearly scoped goal and stopping point especially useful.</p></div>
     </article>
     <article class="card guide-intro">
-      <div><h3>Sol</h3><p>For everyday and complex work. A sensible starting point for coding, analysis, and open-ended tasks.</p></div>
+      <div><h3>Sol</h3><p>For everyday and complex work. It can keep investigating through many model and tool calls; define the scope or ask for a checkpoint on bounded tasks.</p></div>
     </article>
     <article class="card guide-intro">
-      <div><h3>Luna</h3><p>For clear, repeatable tasks where you can describe the expected result precisely.</p></div>
+      <div><h3>Luna</h3><p>For clear, repeatable tasks where you can describe the expected result precisely. A useful first choice when deep, open-ended investigation is unnecessary.</p></div>
     </article>
   </div>
 
@@ -29,20 +29,20 @@
 
   <article class="card guide-section guide-cost-comparison" aria-labelledby="guide-cost-comparison-title">
     <div class="guide-section-head"><div><p class="eyebrow">Observed in local tasks</p><h3 id="guide-cost-comparison-title">GPT‑5.6 Sol vs GPT‑6 Sol: what turns used</h3></div></div>
-    <p class="guide-help">The rate table above prices tokens. This larger local sample shows complete, metered turns—not a controlled model benchmark.</p>
+    <p class="guide-help">The rate table above prices tokens. This fixed, anonymized sample from the maintainer's local logs shows complete, metered turns—not a controlled model benchmark or your own usage.</p>
     <div class="guide-comparison-grid">
       <div class="guide-comparison-rates">
         <table class="guide-comparison-table">
           <caption>Local history · through September 29, 2026</caption>
           <thead><tr><th scope="col">Per metered turn</th><th scope="col"><span class="model-sol">GPT‑5.6 Sol</span></th><th scope="col"><span class="model-sol">GPT‑6 Sol</span></th></tr></thead>
           <tbody>
-            <tr><th scope="row">Metered turns / tasks</th><td>3,091 / 26</td><td>248 / 13</td></tr>
+            <tr><th scope="row">Metered turns / tasks</th><td>3,091 / 26</td><td>258 / 14</td></tr>
             <tr><th scope="row">Median model calls</th><td>2</td><td>3</td></tr>
             <tr><th scope="row">Median tool calls</th><td>1</td><td>2</td></tr>
-            <tr><th scope="row">Median input tokens</th><td>313K</td><td>291K</td></tr>
-            <tr><th scope="row">Median output tokens</th><td>1.3K</td><td>818</td></tr>
-            <tr><th scope="row">Median estimated credits</th><td>6.95</td><td>3.82</td></tr>
-            <tr><th scope="row">75th-percentile credits</th><td>25.45</td><td>13.35</td></tr>
+            <tr><th scope="row">Median input tokens</th><td>313K</td><td>299K</td></tr>
+            <tr><th scope="row">Median output tokens</th><td>1.3K</td><td>846</td></tr>
+            <tr><th scope="row">Median estimated credits</th><td>6.95</td><td>4.20</td></tr>
+            <tr><th scope="row">75th-percentile credits</th><td>25.45</td><td>13.71</td></tr>
           </tbody>
         </table>
       </div>
@@ -52,7 +52,23 @@
         <p><strong>What to take away:</strong> More reasoning and tool iterations can erase a cheaper token rate on a particular task. These logs do not show that either model is intrinsically faster, cheaper per task, or better quality.</p>
       </div>
     </div>
-    <p class="guide-footnote">Sample uses all locally saved primary-task turns with recorded usage: GPT‑5.6 Sol mostly July–August (71% High effort) and GPT‑6 Sol in September (79% Low/Light effort). Only two tasks used both models, with too few balanced turns for a paired comparison. Older GPT‑5.6 logs contain synthetic or collapsed timestamps, so elapsed time is intentionally omitted. Per-turn figures exclude automatic work outside prompts and separately logged review agents. Credits are estimates, not billed charges or plan percentages.</p>
+    <p class="guide-footnote">Sample uses the maintainer's saved primary-task turns with recorded usage: GPT‑5.6 Sol mostly July–August (71% High effort) and GPT‑6 Sol in September (79% Low/Light effort). Only two tasks used both models, with too few balanced turns for a paired comparison. Older GPT‑5.6 logs contain synthetic or collapsed timestamps, so elapsed time is intentionally omitted. Per-turn figures exclude automatic work outside prompts and separately logged review agents. Credits are estimates, not billed charges or plan percentages.</p>
+  </article>
+
+  <article class="card guide-section guide-usage-drivers" aria-labelledby="guide-usage-drivers-title">
+    <div class="guide-section-head"><div><p class="eyebrow">Why a prompt can use so much</p><h3 id="guide-usage-drivers-title">Repeated context reads in long GPT‑6 Sol turns</h3></div></div>
+    <p class="guide-help">One prompt can contain many model calls. After tool results or further reasoning, another call may process much of the conversation again. Cached input is cheaper per token, but its cumulative count still grows.</p>
+    <div class="guide-table-wrap"><table class="guide-table">
+      <thead><tr><th scope="col">Model calls in a turn</th><th scope="col">Turns</th><th scope="col">Median elapsed</th><th scope="col">Median input</th><th scope="col">Median cached input</th><th scope="col">Median estimated credits</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1–2</th><td>124</td><td>11 sec</td><td>137K</td><td>125K</td><td>0.85</td></tr>
+        <tr><th scope="row">3–9</th><td>51</td><td>1 min</td><td>480K</td><td>459K</td><td>3.84</td></tr>
+        <tr><th scope="row">10+</th><td>83</td><td>5 min 7 sec</td><td>2.9M</td><td>2.8M</td><td>21.35</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>What matters:</strong> The 10+ call group was 32% of these turns but accounted for about 83% of their estimated credits. The 2.8M cached input is the sum of repeated reads across calls—not the size of a single context window.</p>
+    <p><strong>How to work with Sol:</strong> For a bounded request, name the files or sources, define the desired output, and ask it to report before expanding the investigation. For an open-ended task, the extra iterations may be worthwhile; watch the model-call count and cached input in the Task / Session view.</p>
+    <p class="guide-footnote">Fixed, anonymized sample of 258 metered GPT‑6 Sol turns from the maintainer's local logs, September 2026. Elapsed time includes tool waits, so it is not model speed. Whole-session duration includes idle gaps and is less useful for explaining one prompt. These figures are not your live data, billed charges, or plan percentages. <a href="https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan" target="_blank" rel="noreferrer">Official usage explanation ↗</a></p>
   </article>
 
   <div class="guide-bottom">

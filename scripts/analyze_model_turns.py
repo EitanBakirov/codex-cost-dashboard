@@ -90,6 +90,9 @@ def main() -> None:
                 "input": usage.input_tokens,
                 "cached": usage.cached_input_tokens,
                 "output": usage.output_tokens,
+                "fresh_credits": prompt.meter.fresh_input_credits,
+                "cached_credits": prompt.meter.cached_input_credits,
+                "output_credits": prompt.meter.output_credits,
                 "duration": duration(prompt.started_at, prompt.completed_at),
                 "month": str(prompt.started_at or "")[:7],
             })
@@ -108,6 +111,24 @@ def main() -> None:
     print(f"tasks containing both models: {len(paired)}")
     for model in MODELS:
         describe(f"  {model} within paired tasks", [row for row in rows if row["task"] in paired and row["model"] == model])
+
+    sol = [row for row in rows if row["model"] == "gpt-6-sol" and row["calls"]]
+    print("GPT-6 Sol usage drivers:")
+    for label, selected in (
+        ("1-2 calls", [row for row in sol if row["calls"] <= 2]),
+        ("3-9 calls", [row for row in sol if 3 <= row["calls"] <= 9]),
+        ("10+ calls", [row for row in sol if row["calls"] >= 10]),
+    ):
+        describe(label, selected)
+    if sol:
+        total_credits = sum(row["credits"] for row in sol)
+        heavy = [row for row in sol if row["calls"] >= 10]
+        print(f"  10+ call share of turns: {len(heavy) / len(sol):.1%}")
+        print(f"  10+ call share of credits: {sum(row['credits'] for row in heavy) / total_credits:.1%}")
+        for name in ("fresh", "cached", "output"):
+            tokens = sum(row["input"] - row["cached"] if name == "fresh" else row[name] for row in sol)
+            credits = sum(row[name + "_credits"] for row in sol)
+            print(f"  {name}: {tokens:,} tokens, {credits:,.2f} credits")
 
 
 if __name__ == "__main__":

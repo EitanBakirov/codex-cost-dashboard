@@ -136,6 +136,8 @@ class PreviewTests(unittest.TestCase):
         self.assertIn('data-view="guide"', HTML)
         self.assertIn('id="guide" hidden', HTML)
         self.assertIn("What the effort bar changes", HTML)
+        self.assertIn("Repeated context reads in long GPT‑6 Sol turns", HTML)
+        self.assertIn("258 metered GPT‑6 Sol turns", HTML)
         for family in ("astra", "sol", "terra", "luna"):
             self.assertIn(f"--model-{family}:", HTML)
             self.assertIn(f"    {family}: '", HTML)

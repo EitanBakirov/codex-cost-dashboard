@@ -23,6 +23,10 @@
 .guide-table .guide-fit{color:var(--muted);font-size:12px}
 .guide-table .guide-status{display:block;margin-top:3px;color:var(--muted);font-size:10px;font-weight:700}
 .guide-table .guide-status.retirement{color:var(--bad)}
+.guide-usage-drivers .guide-table tbody tr:last-child{background:#3a301f}
+.guide-usage-drivers .guide-table tbody tr:last-child th,.guide-usage-drivers .guide-table tbody tr:last-child td:last-child{color:#f2ce85}
+.guide-usage-drivers .guide-table td{font-variant-numeric:tabular-nums;white-space:nowrap}
+.guide-usage-drivers p strong{color:var(--text)}
 .guide-section .guide-footnote{margin-top:13px;font-size:12px}
 .guide-cost-comparison .guide-help{margin-bottom:17px}
 .guide-comparison-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
