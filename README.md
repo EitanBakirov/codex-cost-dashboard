@@ -119,9 +119,11 @@ It compares identical model-call bands for both Sol versions to show how
 repeated calls accumulate cached context, then offers guidance for scoping
 bounded work. These
 fixed, anonymized sample figures are separate from the installer's live totals.
-The guide also compares September turn and summed task spans, while explicitly
-excluding older GPT-5.6 timing records whose timestamps are unreliable. Turn
-spans include tool waits and are not billable model-compute time.
+The guide also shows a fixed, anonymized seven-day task-level slice. It makes
+the concentration in one long GPT-6 Sol task visible without treating it as a
+typical model result. Summed prompt spans include tool waits and are not
+billable model-compute time. Older GPT-5.6 timing records with unreliable
+timestamps are excluded from the timing comparison.
 
 Celestial model families use small SVG icons before their names throughout the
 dashboard: stars for Astra, sun for Sol, globe for Terra, and crescent for Luna.

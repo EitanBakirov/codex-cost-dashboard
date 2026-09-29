@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import statistics
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from codex_cost_dashboard.monitor import (
     DEFAULT_SESSIONS_DIR,
@@ -94,8 +94,33 @@ def main() -> None:
                 "cached_credits": prompt.meter.cached_input_credits,
                 "output_credits": prompt.meter.output_credits,
                 "duration": duration(prompt.started_at, prompt.completed_at),
+                "started": prompt.started_at,
                 "month": str(prompt.started_at or "")[:7],
             })
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    print("Recent seven-day task rollup (metered, completed prompts only):")
+    for model in MODELS:
+        recent = []
+        for row in rows:
+            try:
+                started = datetime.fromisoformat(str(row["started"]).replace("Z", "+00:00"))
+            except (TypeError, ValueError):
+                continue
+            if row["model"] == model and row["calls"] and started >= cutoff:
+                recent.append(row)
+        tasks: dict[str, list[dict]] = defaultdict(list)
+        for row in recent:
+            tasks[row["task"]].append(row)
+        print(f"  {model}: {len(recent)} prompts, {len(tasks)} tasks")
+        if tasks:
+            for name in ("credits", "calls", "tools", "input", "cached", "duration"):
+                totals = [sum((row[name] or 0) for row in task_rows) for task_rows in tasks.values()]
+                print(f"    {name}/task: median {quantile(totals, .5):,.1f}, p75 {quantile(totals, .75):,.1f}, max {max(totals):,.1f}, total {sum(totals):,.1f}")
+            prompts_per_task = [len(task_rows) for task_rows in tasks.values()]
+            print(f"    prompts/task: median {quantile(prompts_per_task, .5):,.1f}, p75 {quantile(prompts_per_task, .75):,.1f}, max {max(prompts_per_task)}")
+            dominant = max(tasks.values(), key=lambda task_rows: sum(row["credits"] for row in task_rows))
+            dominant_credits = sum(row["credits"] for row in dominant)
+            print(f"    highest-credit task: {len(dominant)} prompts, {sum(row['calls'] for row in dominant)} model calls, {sum(row['tools'] for row in dominant)} tool calls, {dominant_credits:,.1f} credits ({dominant_credits / sum(row['credits'] for row in recent):.1%} of model credits)")
     for model in MODELS:
         selected = [row for row in rows if row["model"] == model]
         print(f"{model} months: {dict(sorted(Counter(row['month'] for row in selected).items()))}")

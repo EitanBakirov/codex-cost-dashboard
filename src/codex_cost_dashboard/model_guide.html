@@ -74,23 +74,23 @@
     <p class="guide-footnote">Same fixed samples as above. The 10+ group accounts for 20.6% of GPT‑5.6 turns and 80.7% of its estimated credits; for GPT‑6, 32.7% of turns and 82.6% of credits. Elapsed time is omitted here because older GPT‑5.6 timestamps are unreliable. This is not a controlled like-for-like benchmark. <a href="https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan" target="_blank" rel="noreferrer">Official usage explanation ↗</a></p>
     </div>
     <div class="guide-analysis-subsection guide-timing-comparison">
-      <div class="guide-section-head"><div><p class="eyebrow">Time comparison · September logs only</p><h3>Did GPT‑6 Sol work longer per prompt or task?</h3></div></div>
-      <p class="guide-help">The July–August GPT‑5.6 logs have collapsed timing (median recorded duration: zero), so this uses only September turns with usable timestamps. “Turn span” runs from a submitted prompt to its completion; it includes tool waits and is not pure model compute time. “Task span” sums those turn spans within each task, excluding idle gaps between prompts.</p>
+      <div class="guide-section-head"><div><p class="eyebrow">Recent task-level view · seven days ending September 29, 2026</p><h3>Why a long GPT‑6 Sol task can dominate usage</h3></div></div>
+      <p class="guide-help">A task/session can contain many prompts, and each prompt can contain many model calls. Summed run span adds prompt-to-completion time within a task, including tool waits but excluding idle gaps between prompts. It is not pure model compute time or a billing unit.</p>
       <div class="guide-table-wrap"><table class="guide-table">
-        <thead><tr><th scope="col">Model</th><th scope="col">Timed prompts / tasks</th><th scope="col">Median turn span</th><th scope="col">75th-percentile turn span</th><th scope="col">Median summed span / task</th></tr></thead>
+        <thead><tr><th scope="col">Model</th><th scope="col">Tasks / prompts</th><th scope="col">Median span / task</th><th scope="col">Longest task span</th><th scope="col">Most calls in a task</th><th scope="col">Highest task credits</th></tr></thead>
         <tbody>
-          <tr><th scope="row">GPT‑5.6 Sol</th><td>49 / 4</td><td>1m 34s</td><td>3m 41s</td><td>46m 48s</td></tr>
-          <tr><th scope="row">GPT‑6 Sol</th><td>263 / 13</td><td>31s</td><td>3m 08s</td><td>4m 45s</td></tr>
+          <tr><th scope="row">GPT‑5.6 Sol</th><td>1 / 31</td><td>51m 28s</td><td>51m 28s</td><td>141</td><td>418.5</td></tr>
+          <tr><th scope="row">GPT‑6 Sol</th><td>13 / 266</td><td>4m 45s</td><td>9h 42m</td><td>2,107</td><td>2,200.7</td></tr>
         </tbody>
       </table></div>
-      <p class="guide-footnote">These groups are not matched: one GPT‑5.6 task contains 75.5% of its timed turns, and the task sizes and effort settings differ. The small GPT‑5.6 sample cannot establish which model is intrinsically faster. It does <em>not</em> support a claim that GPT‑6 ran longer per prompt or task in these logs.</p>
+      <p class="guide-footnote">The longest GPT‑6 task contained 149 prompts, 2,107 model calls, 1,954 tool calls, about 292M cumulative input tokens (280M cached), and 2,200.7 estimated credits—about 70.5% of GPT‑6 credits in this seven-day slice. This explains a real concentration of usage, not a typical GPT‑6 task. Only one GPT‑5.6 task occurred in the same window, so the two maxima cannot establish an intrinsic model difference. Older GPT‑5.6 timing records are excluded because their timestamps are unreliable.</p>
     </div>
     <div class="guide-analysis-subsection guide-comparison-explain">
       <p class="eyebrow">Interpretation and choice</p><h3>What should you use?</h3>
-      <p><strong>Overall:</strong> GPT‑6 Sol had slightly more calls in the median turn, yet a lower median credit estimate. Its lower per-token rates mattered more in this mix of work.</p>
+      <p><strong>What the per-prompt median hid:</strong> GPT‑6 Sol had a lower median credit estimate per prompt, but one recent long task consumed about 2,201 estimated credits. Its 2,107 model calls across 149 prompts repeatedly processed context. That is why a session can feel expensive even when the typical prompt is not.</p>
       <p><strong>Same-effort check:</strong> At Medium, the medians were 6.38 credits across 860 GPT‑5.6 Sol turns and 12.10 across 46 GPT‑6 Sol turns. But 83% of the GPT‑6 Medium turns came from one task, so this does not isolate a model effect.</p>
       <p><strong>Why some prompts burn credits:</strong> The 10+ call band dominates estimated credits for <em>both</em> models. The millions of cached tokens are repeated reads across calls—not one context window. GPT‑6 had a larger share of turns in that band, though its median credits within each band were lower in this uneven sample.</p>
-      <p><strong>Time is not the demonstrated cause:</strong> The limited September comparison does not show longer GPT‑6 prompts or tasks. More elapsed time could increase usage when it contains additional model calls, but time itself is not billed as tokens. The available logs cannot prove that GPT‑6 inherently works longer or uses more credits per task.</p>
+      <p><strong>Time and credits:</strong> A long-running session can burn credits because it makes many model calls, especially repeated context reads—not because elapsed minutes are billed. The recent GPT‑6 outlier shows exactly that. The available samples do not prove that GPT‑6 inherently makes every task longer or more expensive than GPT‑5.6.</p>
       <p><strong>Practical choice:</strong> GPT‑6 Sol is not automatically more expensive per turn, nor is its lower rate a guarantee. For bounded work, specify files, desired output, and when to report before expanding. For open-ended work, extra iterations may be worthwhile; monitor model calls and cached input in Task / Session. This sample cannot establish which model is intrinsically faster or better quality.</p>
     </div>
   </article>
