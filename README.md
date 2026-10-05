@@ -1,23 +1,27 @@
 # Codex Cost Dashboard
 
-A private, local-only dashboard for understanding Codex activity, token usage, and estimated cost across tasks.
+A local web dashboard for inspecting the Codex session history already on your computer: task activity, token usage, model mix, locally observed allowance, and estimated credit cost.
 
-It reads the Codex session logs already stored on your computer, serves the dashboard on `127.0.0.1`, and does not upload anything. The repository is the only online component.
+![Global usage overview](docs/screenshots/global-overview.png)
+
+It binds to `127.0.0.1` only. Session files stay on the machine running it; the default experience has no telemetry, analytics, CDN assets, API calls, or external requests.
+
+![Active task session with Follow latest selected](docs/screenshots/task-session.png)
+
+![Local activity and model mix](docs/screenshots/activity-and-models.png)
 
 > [!IMPORTANT]
-> This is an independent community tool, not an official OpenAI product. Codex's local JSONL session format is not a documented public API and may change. Dollar values are estimates, not invoices, and the observed plan meter is not a token-to-plan conversion.
+> This is an independent community tool, not an official OpenAI product. Codex's JSONL session format is an implementation detail that may change. Estimates are not invoices, and the observed plan meter is not a token-to-plan conversion.
 
-## What it shows
+## At a glance
 
-- A global view for the last 24 hours, since 7 AM, seven days, or all local history
-- Estimated credit use, a configurable dollar equivalent, fresh input, cached input, and output tokens
-- Current locally observed plan allowance and reset time
-- Model usage mix
-- A separate Models & pricing guide with the bundled credit rate table, model roles, reasoning-effort explanations, and an informal Sol-versus-Terra comparison from local sample data
-- Task/session totals and prompt-by-prompt history
-- Model, effort, duration, calls, tools, token counts, and estimated cost per prompt
-- Compact skill, image, local-file, and clickable-link markers
-- The currently signed-in Codex account and plan, decoded locally from the local auth file
+- Global views for the last 24 hours, since 7 AM, seven days, or all local history
+- Per-task totals and prompt history: model, effort, duration, tools, token counts, and estimated cost
+- A bundled Models & pricing guide, including credit rates, model roles, and reasoning-effort context
+- Locally decoded account/plan claims and the latest allowance snapshot saved by Codex
+- Inline markers for skills, images, local files, and links in prompt history
+
+## Quick start
 
 ## Requirements
 
@@ -76,11 +80,52 @@ PowerShell equivalent:
 py -3 run_dashboard.py --open
 ```
 
+### Verify the clone
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The project has no runtime dependencies outside the Python standard library.
+
 ## Install with a coding agent
 
 Give your local coding agent this prompt:
 
 > Clone `https://github.com/EitanBakirov/codex-cost-dashboard.git`, install it in a project-local Python 3.10+ virtual environment using the instructions for this operating system, run its test suite, and launch `python -m codex_cost_dashboard.dashboard --open`. Keep it local-only, do not copy or upload my Codex session files, and do not change my Codex configuration.
+
+## Architecture and local data boundary
+
+The dashboard is deliberately small and portable:
+
+```text
+Codex local state                 Dashboard process                 Browser
+─────────────────                 ─────────────────                 ───────
+$CODEX_HOME/sessions/*.jsonl ──▶  monitor.py parses events       ─▶  127.0.0.1:8766
+$CODEX_HOME/session_index.jsonl   dashboard.py aggregates/views       static HTML/CSS/JS
+$CODEX_HOME/auth.json             rate_card.py estimates credits
+```
+
+| Component | Responsibility |
+| --- | --- |
+| `monitor.py` | Reads append-only JSONL session events and derives prompts, calls, tools, token counters, and allowance snapshots. |
+| `dashboard.py` | Serves the local UI and JSON endpoints; aggregates sessions and handles local preferences. |
+| `rate_card.py` | Holds the versioned credit-rate table used by the estimator. |
+| `dashboard.html` | Self-contained browser UI; the server injects the bundled model guide and icon assets. |
+| `openai_updates.py` | Performs the explicit, opt-in public-documentation update check. |
+
+`CODEX_HOME` defaults to `~/.codex` and is honored when set. The expected locations are documented in the [official Codex configuration guide](https://learn.chatgpt.com/docs/config-file/config-advanced#config-and-state-locations).
+
+### Read/write/network contract
+
+| Boundary | Default behavior |
+| --- | --- |
+| Reads | Session logs, optional session index, and optional auth claims under `CODEX_HOME`. |
+| Writes | Only dashboard state under `$CODEX_HOME/cost-dashboard/`; never session logs or Codex configuration. |
+| Network | None. The optional documentation check contacts only the two official public URLs named below. |
+| Listening address | `127.0.0.1` only; it is not exposed on the LAN. |
+
+This model makes it suitable for people and local coding agents: clone it, run it in a project-local virtual environment, and point it at an alternate session directory with `--sessions-dir` when needed. Do not commit session logs, `auth.json`, or dashboard state.
 
 ## Options
 
@@ -149,18 +194,9 @@ The companion `codex-cost-monitor` command provides a live terminal view. Use `c
 
 ## Privacy model
 
-The dashboard reads:
+The dashboard may read `$CODEX_HOME/sessions/**/*.jsonl`, `$CODEX_HOME/session_index.jsonl`, and `$CODEX_HOME/auth.json`. The auth file is used only to display non-secret account identity and plan claims locally.
 
-- `$CODEX_HOME/sessions/**/*.jsonl`
-- `$CODEX_HOME/session_index.jsonl`, when present, for task names
-- `$CODEX_HOME/auth.json`, when present, only to display non-secret account identity and plan claims locally
-
-It writes only:
-
-- `$CODEX_HOME/cost-dashboard/dashboard-state.json`
-- `$CODEX_HOME/cost-dashboard/openai-update-state.json` only after an explicit update check or when the daily opt-in is enabled
-
-It does not modify Codex sessions or authentication. By default it makes no external requests: no analytics, telemetry, CDN, external fonts, API calls, or background update checks. The optional update check contacts only the two public official documentation URLs listed above and sends no local session, token, account, or usage data. See [SECURITY.md](SECURITY.md) for the detailed boundary.
+It writes `$CODEX_HOME/cost-dashboard/dashboard-state.json` and, only after an explicit check or daily opt-in, `$CODEX_HOME/cost-dashboard/openai-update-state.json`. It does not modify Codex sessions or authentication. See [SECURITY.md](SECURITY.md) for the detailed boundary.
 
 ## Accuracy and limitations
 
@@ -175,14 +211,21 @@ It does not modify Codex sessions or authentication. By default it makes no exte
 - A named model without a bundled rate remains visible but contributes no estimated cost until a rate is added.
 - Local logs can change across Codex releases. Please file a sanitized fixture when a new shape is not recognized.
 
-## Development
+## Develop and contribute
 
 ```bash
 python -m pip install -e .
 python -m unittest discover -s tests -v
 ```
 
-The project intentionally uses only the Python standard library at runtime.
+Useful entry points:
+
+- `python -m codex_cost_dashboard.dashboard --open` — run the local web dashboard
+- `python -m codex_cost_dashboard.monitor --help` — inspect the terminal monitor options
+- `python -m codex_cost_dashboard.dashboard --sessions-dir /path/to/sessions` — test against a non-default, sanitized fixture directory
+- `python -m codex_cost_dashboard.dashboard --check-openai-updates` — perform the explicit public-documentation comparison
+
+Before opening a pull request, run the test suite and keep fixtures sanitized. See [CONTRIBUTING.md](CONTRIBUTING.md) for repository conventions and [SECURITY.md](SECURITY.md) for the data boundary.
 
 ## License
 
